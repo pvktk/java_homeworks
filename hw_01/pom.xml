@@ -12,6 +12,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <source>1.8</source>
+    <target>1.8</target>
   </properties>
 
   <dependencies>
