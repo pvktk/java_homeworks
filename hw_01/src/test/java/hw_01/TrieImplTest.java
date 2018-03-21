@@ -2,18 +2,54 @@ package hw_01;
 
 import junit.framework.TestCase;
 
-public class TrieImplTest
-    extends TestCase
-{
+public class TrieImplTest extends TestCase {
 	private Bor b;
-	
-	public TrieImplTest() {
-		super();
+
+	public void setUp() {
 		b = new Bor();
 	}
-	
-	public void testBor() {
-		b = new Bor();
+
+	public void testAddSizeContains() {
+		assertFalse(b.contains("Hello"));
+		assertTrue(b.add("Hello"));
+		assertTrue(b.contains("Hello"));
+		assertEquals(5, b.size());
+		assertEquals(1, b.howManyStartsWithPrefix("Hell"));
+	}
+
+	public void testAddContainsPrefix() {
+		b.add("Hello");
+		assertFalse(b.contains("Hell"));
+		assertTrue(b.add("Hell"));
+		assertTrue(b.contains("Hell"));
+		assertEquals(5, b.size());
+		assertEquals(2, b.howManyStartsWithPrefix("Hell"));
+	}
+
+	public void testAddOutstandingWord() {
+		b.add("Hello");
+		assertTrue(b.add("Head"));
+		assertEquals(7, b.size());
+	}
+
+	public void testRemovePrefix() {
+		b.add("Hello");
+		b.add("Hell");
+		assertFalse(b.remove("He"));
+		assertTrue(b.remove("Hell"));
+		assertEquals(5, b.size());
+		assertEquals(1, b.howManyStartsWithPrefix("Hell"));
+	}
+
+	public void testTemoveSuffix() {
+		b.add("Hello");
+		b.add("Hell");
+		assertTrue(b.remove("Hello"));
+		assertEquals(4, b.size());
+	}
+/*
+	public void testBorBigTest() {
+		//b = new Bor();
 		//Добавление
 		assertFalse(b.contains("Hello"));
 		assertTrue(b.add("Hello"));
@@ -76,4 +112,5 @@ public class TrieImplTest
 		assertTrue(b.remove("Head"));
 		assertEquals(0, b.size());
 	}
+*/
 }

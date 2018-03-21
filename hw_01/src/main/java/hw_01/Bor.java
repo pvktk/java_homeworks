@@ -1,6 +1,9 @@
 package hw_01;
 
 public class Bor implements Trie {
+	final private Node bor;
+	private int size = 0;
+
 	public Bor() {
 		bor = new Node();
 	}
@@ -11,13 +14,16 @@ public class Bor implements Trie {
 		}
 		
 		Node p = bor;
+		
 		p.nwords++;
 		for (int i = 0; i < element.length(); i++) {
-			if (p.lifes[arr_num(element.charAt(i))] == null) {
-				p.lifes[arr_num(element.charAt(i))] = new Node();
+			int currIdx = arrNum(element.charAt(i));
+			
+			if (p.lifes[currIdx] == null) {
+				p.lifes[currIdx] = new Node();
 				size++;
 			}
-			p = p.lifes[arr_num(element.charAt(i))];
+			p = p.lifes[currIdx];
 			p.nwords++;
 		}
 		
@@ -28,17 +34,15 @@ public class Bor implements Trie {
 	public boolean contains(String element) {
 		Node p = bor;
 		for (int i = 0; i < element.length(); i++) {
-			if (p.lifes[arr_num(element.charAt(i))] == null) {
+			int currIdx = arrNum(element.charAt(i));
+
+			if (p.lifes[currIdx] == null) {
 				return false;
 			}
-			p = p.lifes[arr_num(element.charAt(i))];
+			p = p.lifes[currIdx];
 		}
-		
-		if (p.isTerminal) {
-			return true;
-		}
-
-		return false;
+	
+		return p.isTerminal;
 	}
 
 	public boolean remove(String element) {
@@ -49,12 +53,14 @@ public class Bor implements Trie {
 		Node p = bor;
 		p.nwords--;
 		for (int i = 0; i < element.length(); i++) {
-			if (p.lifes[arr_num(element.charAt(i))].nwords == 1) {
+			int currIdx = arrNum(element.charAt(i));
+			
+			if (p.lifes[currIdx].nwords == 1) {
 				size -= element.length() - i;
-				p.lifes[arr_num(element.charAt(i))] = null;
+				p.lifes[currIdx] = null;
 				return true;
 			}
-			p = p.lifes[arr_num(element.charAt(i))];
+			p = p.lifes[currIdx];
 			p.nwords--;
 		}
 		
@@ -70,18 +76,18 @@ public class Bor implements Trie {
 	public int howManyStartsWithPrefix(String prefix) {
 		Node p = bor;
 		for (int i = 0; i < prefix.length(); i++) {
-			if (p.lifes[arr_num(prefix.charAt(i))] == null) {
+			int currIdx = arrNum(prefix.charAt(i));
+			
+			if (p.lifes[currIdx] == null) {
 				return 0;
 			}
-			p = p.lifes[arr_num(prefix.charAt(i))];
+			p = p.lifes[currIdx];
 		}
 		
 		return p.nwords;
 	}
 
-	private Node bor;
-	private int size = 0;
-	private int arr_num(char a) {
+	private int arrNum(char a) {
 		if ('a' <= a && a <= 'z') {
 			return a - 'a';
 		}
@@ -92,6 +98,7 @@ public class Bor implements Trie {
 		
 		return -1;
 	}
+
 	private class Node {
 		public boolean isTerminal;
 		public int nwords;
