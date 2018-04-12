@@ -1,5 +1,7 @@
 package hw_01;
 
+import java.io.*;
+
 import junit.framework.TestCase;
 
 public class TrieImplTest extends TestCase {
@@ -13,7 +15,7 @@ public class TrieImplTest extends TestCase {
 		assertFalse(b.contains("Hello"));
 		assertTrue(b.add("Hello"));
 		assertTrue(b.contains("Hello"));
-		assertEquals(5, b.size());
+		assertEquals(1, b.size());
 		assertEquals(1, b.howManyStartsWithPrefix("Hell"));
 	}
 
@@ -22,14 +24,14 @@ public class TrieImplTest extends TestCase {
 		assertFalse(b.contains("Hell"));
 		assertTrue(b.add("Hell"));
 		assertTrue(b.contains("Hell"));
-		assertEquals(5, b.size());
+		assertEquals(2, b.size());
 		assertEquals(2, b.howManyStartsWithPrefix("Hell"));
 	}
 
 	public void testAddOutstandingWord() {
 		b.add("Hello");
 		assertTrue(b.add("Head"));
-		assertEquals(7, b.size());
+		assertEquals(2, b.size());
 	}
 
 	public void testRemovePrefix() {
@@ -37,7 +39,7 @@ public class TrieImplTest extends TestCase {
 		b.add("Hell");
 		assertFalse(b.remove("He"));
 		assertTrue(b.remove("Hell"));
-		assertEquals(5, b.size());
+		assertEquals(1, b.size());
 		assertEquals(1, b.howManyStartsWithPrefix("Hell"));
 	}
 
@@ -45,72 +47,32 @@ public class TrieImplTest extends TestCase {
 		b.add("Hello");
 		b.add("Hell");
 		assertTrue(b.remove("Hello"));
-		assertEquals(4, b.size());
+		assertEquals(1, b.size());
 	}
-/*
-	public void testBorBigTest() {
-		//b = new Bor();
-		//Добавление
-		assertFalse(b.contains("Hello"));
-		assertTrue(b.add("Hello"));
-		assertTrue(b.contains("Hello"));
-		assertEquals(5, b.size());
-		assertFalse(b.add("Hello"));
-		assertEquals(5, b.size());
-		assertFalse(b.contains("Hell"));
-		assertTrue(b.add("Hell"));
-		assertTrue(b.contains("Hell"));
-		assertEquals(5, b.size());
-		assertFalse(b.add("Hell"));
-		assertEquals(5, b.size());
-		assertFalse(b.contains("Head"));
-		assertTrue(b.add("Head"));
-		assertTrue(b.contains("Head"));
-		assertEquals(7, b.size());
-		assertFalse(b.contains(""));
-		assertTrue(b.add(""));
-		assertTrue(b.contains(""));
-		assertEquals(7, b.size());
+	
+	public void testSerialDeserial() throws IOException {
+		b.add("Hello");
+		b.add("Head");
 		
-		//Проверка префиксов
-		assertEquals(3, b.howManyStartsWithPrefix("H"));
-		assertEquals(4, b.howManyStartsWithPrefix(""));
-		assertEquals(1, b.howManyStartsWithPrefix("Hea"));
-		assertEquals(2, b.howManyStartsWithPrefix("Hell"));
-		assertEquals(0, b.howManyStartsWithPrefix("h"));
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		b.serialize(baos);
+		byte[] buf1 = baos.toByteArray();
 		
-		//Удаление
-		assertFalse(b.remove("h"));
-		assertFalse(b.remove("H"));
-		assertTrue(b.remove("Hell"));
-		assertFalse(b.remove("Hell"));
-		assertFalse(b.contains("Hell"));
-		assertEquals(7, b.size());
-		assertEquals(1, b.howManyStartsWithPrefix("Hell"));
+		Bor b1 = new Bor();
+		b1.deserialize(new ByteArrayInputStream(buf1));
+		baos = new ByteArrayOutputStream();
+		b1.serialize(baos);
+		byte[] buf2 = baos.toByteArray();
 		
-		assertTrue(b.remove(""));
-		assertFalse(b.remove(""));
-		assertEquals(7, b.size());
-		assertEquals(2, b.howManyStartsWithPrefix(""));
+		assertEquals(buf1.length, buf2.length);
 		
-		assertTrue(b.remove("Hello"));
-		assertFalse(b.remove("Hello"));
-		assertEquals(4, b.size());
+		for(int i = 0; i < buf1.length; i++) {
+			assertEquals(buf1[i], buf2[i]);
+		}
 		
-		assertTrue(b.contains("Head"));
-		assertTrue(b.add("HeadZzZ"));
-		assertEquals(7, b.size());
-		assertEquals(2, b.howManyStartsWithPrefix("Head"));
-		assertEquals(1, b.howManyStartsWithPrefix("HeadZzZ"));
-		assertFalse(b.remove("HeadZ"));
-		assertTrue(b.remove("HeadZzZ"));
-		assertEquals(4, b.size());
-		assertEquals(1, b.howManyStartsWithPrefix("Head"));
-		assertEquals(1, b.howManyStartsWithPrefix(""));
-		assertEquals(0, b.howManyStartsWithPrefix("HeadZ"));
-		
-		assertTrue(b.remove("Head"));
-		assertEquals(0, b.size());
+		assertTrue(b1.contains("Hello"));
+		assertTrue(b1.contains("Head"));
+		assertEquals(2, b1.size());
 	}
-*/
+
 }
