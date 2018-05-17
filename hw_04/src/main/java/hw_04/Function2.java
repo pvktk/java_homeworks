@@ -3,11 +3,12 @@ package hw_04;
 public abstract class Function2<R, A1, A2> {
 	public abstract R apply(A1 arg1, A2 arg2);
 	
-	public <Rg> Function2<Rg, A1, A2> compose(Function1<Rg, ? super R> g) {
-		return new Function2<Rg, A1, A2>() {
+	public <Rcomp, Rg extends Rcomp, A1comp extends A1, A2comp extends A2>
+		Function2<Rcomp, A1comp, A2comp> compose(Function1<Rg, ? super R> g) {
+		return new Function2<Rcomp, A1comp, A2comp>() {
 
 			@Override
-			public Rg apply(A1 arg1, A2 arg2) {
+			public Rg apply(A1comp arg1, A2comp arg2) {
 				return g.apply(Function2.this.apply(arg1, arg2));
 			}
 			

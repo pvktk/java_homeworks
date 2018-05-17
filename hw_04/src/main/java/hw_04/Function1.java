@@ -3,11 +3,11 @@ package hw_04;
 public interface Function1<R, A1> {
 	R apply(A1 arg);
 
-	default <Rg> Function1<Rg, A1> compose(Function1<Rg, ? super R> g) {
-		return new Function1<Rg, A1>() {
+	default <Rcomp, Rg extends Rcomp, Acomp extends A1> Function1<Rcomp, Acomp> compose(Function1<Rg, ? super R> g) {
+		return new Function1<Rcomp, Acomp>() {
 
 			@Override
-			public Rg apply(A1 arg) {
+			public Rg apply(Acomp arg) {
 				return g.apply(Function1.this.apply(arg));
 			}
 		};

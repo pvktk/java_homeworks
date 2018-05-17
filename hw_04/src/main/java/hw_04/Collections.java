@@ -3,16 +3,16 @@ package hw_04;
 import java.util.*;
 
 public class Collections {
-	public static <R, A> List<R> map(Function1<R, A> f, Iterable<? extends A> a) {
-		ArrayList<R> res = new ArrayList<R>();
+	public static <R1, R extends R1, A> List<R1> map(Function1<R, A> f, Iterable<? extends A> a) {
+		ArrayList<R1> res = new ArrayList<R1>();
 		for (A i : a) {
 			res.add(f.apply(i));
 		}
 		return res;
 	}
 	
-	public static <A> List<A> filter(Predicate<A> p, Iterable<? extends A> a) {
-		ArrayList<A> res = new ArrayList<A>();
+	public static <A1, A extends A1> List<A1> filter(Predicate<A> p, Iterable<? extends A> a) {
+		ArrayList<A1> res = new ArrayList<A1>();
 		for (A i : a) {
 			if (p.test(i)) {
 				res.add(i);
@@ -21,8 +21,8 @@ public class Collections {
 		return res;
 	}
 	
-	public static <A> List<A> takeWhile(Predicate<A> p, Iterable<? extends A> a) {
-		ArrayList<A> res = new ArrayList<A>();
+	public static <A1, A extends A1> List<A1> takeWhile(Predicate<A> p, Iterable<? extends A> a) {
+		ArrayList<A1> res = new ArrayList<A1>();
 		for (A i : a) {
 			if (!p.test(i)) {
 				return res;
@@ -32,7 +32,7 @@ public class Collections {
 		return res;
 	}
 	
-	public static <A> List<A> takeUnless(Predicate<A> p, Iterable<? extends A> a) {
+	public static <A1, A extends A1> List<A1> takeUnless(Predicate<A> p, Iterable<? extends A> a) {
 		return takeWhile(p.not(), a);
 	}
 	
