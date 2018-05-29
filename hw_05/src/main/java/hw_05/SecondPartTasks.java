@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.function.Supplier;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -23,12 +24,10 @@ public final class SecondPartTasks {
 					try {
 						return Files.lines(Paths.get(p));
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
 						return null;
 					}
 				})
-        		.filter(s -> s.matches(".*"+sequence.toString()+".*"))
+        		.filter(s -> s.contains(sequence.toString()))
         		.collect(Collectors.toList());
     }
 
@@ -38,19 +37,16 @@ public final class SecondPartTasks {
     public static double piDividedBy4() {
         //Random.doubles(10000).collect(() -> new)
     	Random r = new Random(12345);
-    	double[] experimentCount =
+    	final int numberOfExperiments = 10000;
+    	
+    	double experimentCount =
     			Stream.generate((Supplier<double[]>) () ->
     				new double[] {r.nextDouble(), r.nextDouble()})
-    	.limit(10000)
-    	.reduce(new double[] {0,0},
-    			(c, p) -> {
-    				if (Math.pow(p[0] - 0.5, 2) + Math.pow(p[1] - 0.5, 2) <= 0.25) {
-    					c[1] += 1;
-    				}
-    				c[0] += 1;
-    				return c;
-    						});
-    	return experimentCount[1] / experimentCount[0];
+    			.limit(numberOfExperiments)
+    			.filter(p -> Math.pow(p[0] - 0.5, 2) + Math.pow(p[1] - 0.5, 2) <= 0.25)
+    			.count();
+    	
+    	return experimentCount / numberOfExperiments;
     }
 
     // Дано отображение из имени автора в список с содержанием его произведений.
@@ -59,29 +55,11 @@ public final class SecondPartTasks {
         return compositions
         .entrySet()
         .stream()
-        .max(Comparator.comparingLong(entr -> entr.getValue()
+        .max(Comparator.comparingInt(entr -> entr.getValue()
         		.stream()
-        		.flatMapToInt(String::chars)
-        		.count())).orElse(new Entry<String, List<String>>() {
-					
-					@Override
-					public String getKey() {
-						// TODO Auto-generated method stub
-						return null;
-					}
-
-					@Override
-					public List<String> getValue() {
-						// TODO Auto-generated method stub
-						return null;
-					}
-
-					@Override
-					public List<String> setValue(List<String> value) {
-						// TODO Auto-generated method stub
-						return null;
-					}
-				}).getKey();
+        		.collect(Collectors.summingInt(String::length))))
+        .map(Entry::getKey)
+        .orElse(null);
     }
 
     // Вы крупный поставщик продуктов. Каждая торговая сеть делает вам заказ в виде Map<Товар, Количество>.

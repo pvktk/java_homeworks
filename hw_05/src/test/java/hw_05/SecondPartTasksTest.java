@@ -5,6 +5,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,7 @@ public class SecondPartTasksTest {
     @Test
     public void testFindQuotes() {
         assertEquals(
-        		Arrays.asList("askdlcewline kabra"), 
+        		Collections.singletonList("askdlcewline kabra"), 
         		SecondPartTasks.findQuotes(
         				Arrays.asList("existingFile.txt", "nonExistingFile.txt"),
         				"line"));
@@ -48,14 +49,13 @@ public class SecondPartTasksTest {
     			"bc",
     			"cdk"));
     	
-    	testMap.put("Auth3", Arrays.asList());
+    	testMap.put("Auth3", Collections.emptyList());
     	
         assertEquals("Auth2",
         		SecondPartTasks.findPrinter(testMap));
         
-        testMap = new HashMap<>();
         
-        assertNull(SecondPartTasks.findPrinter(testMap));
+        assertNull(SecondPartTasks.findPrinter(Collections.emptyMap()));
     }
 
     @Test
