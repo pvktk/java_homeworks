@@ -101,7 +101,7 @@ public class GitCore {
 		findRepInformation();
 		increaseRevisionNumber();
 		inform.commitMessages.add(message);
-		inform.timestamps.add(new Timestamp(0));
+		inform.timestamps.add(new Timestamp(System.currentTimeMillis()));
 		for (String fname : filenames) {
 			addFile(fname);
 		}
