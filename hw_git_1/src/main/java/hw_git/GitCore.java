@@ -6,7 +6,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -75,15 +78,23 @@ public class GitCore {
 		
 		rel = rel.getParent();
 		
-		Path storage = informPath.resolve(rel).resolve(fname + revision);
+		Path storage = informPath.resolve(storageFolder).resolve(rel).resolve(fname + revision);
 		
 		return storage;
 	}
 	
 	private void addFile(String filename) throws IOException {
 		int revision = inform.revision;
+		Path storage = getStoragePath(filename, revision);
+		storage.getParent().toFile().mkdirs();
+		System.out.println("trying write file to " + storage);
 		Files.copy(Paths.get("").resolve(filename), getStoragePath(filename, revision));
-		inform.allFiles.put(getPathRealRelative(filename).toString(), revision);
+		ArrayList<Integer> revisions = inform.allFiles.get(getPathRealRelative(filename).toString());
+		if (revisions == null) {
+			revisions = new ArrayList<>();
+			inform.allFiles.put(getPathRealRelative(filename).toString(), revisions);
+		}
+		revisions.add(revision);
 	}
 	
 	void makeCommit(String message, String[] filenames) throws IOException, UnversionedException {
@@ -94,6 +105,7 @@ public class GitCore {
 		for (String fname : filenames) {
 			addFile(fname);
 		}
+		updateRepInformation();
 	}
 	
 	private void deleteVersionedFiles(File root) {
@@ -113,10 +125,23 @@ public class GitCore {
 		}
 	}
 	
+	private int getIndexOfLessEq(ArrayList<Integer> list, int val) {
+		int curr = 0;
+		int prev = -1;
+		while (curr < list.size() && list.get(curr) <= val) {
+			prev = curr;
+			curr++;
+		}
+		
+		return prev;
+	}
+	
 	private void restoreVersionedFiles(int revision) throws IOException {
-		for (Map.Entry<String, Integer> ent : inform.allFiles.entrySet()) {
-			if (ent.getValue() <= revision) {
-				Files.copy(informPath.resolve(storageFolder).resolve(ent.getKey()),
+		for (Map.Entry<String, ArrayList<Integer>> ent : inform.allFiles.entrySet()) {
+			int revisionIdx = getIndexOfLessEq(ent.getValue(), revision);
+			if (revisionIdx >= 0) {
+				int revNumber = ent.getValue().get(revisionIdx);
+				Files.copy(informPath.resolve(storageFolder).resolve(ent.getKey() + revNumber),
 						informPath.resolve(ent.getKey()));
 			}
 		}
@@ -130,12 +155,16 @@ public class GitCore {
 	
 	void makeReset(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException {
 		findRepInformation();
-		Iterator<Entry<String, Integer>> it = inform.allFiles.entrySet().iterator();
+		Iterator<Entry<String, ArrayList<Integer>>> it = inform.allFiles.entrySet().iterator();
 		while(it.hasNext()) {
-			Map.Entry<String, Integer> ent = it.next();
-			if (ent.getValue() > revision) {
+			Map.Entry<String, ArrayList<Integer>> ent = it.next();
+			int revisionIndex = getIndexOfLessEq(ent.getValue(), revision);
+			if (revisionIndex == -1) {
 				it.remove();
+			} else {
+				ent.getValue().subList(revisionIndex + 1, ent.getValue().size()).clear();
 			}
+			
 		}
 		updateRepInformation();
 	}
@@ -145,7 +174,10 @@ public class GitCore {
 		if (revision == -1) {
 			revision = inform.revision;
 		}
-		return inform.commitMessages.get(revision) + "\n"
-				+ inform.timestamps.get(revision);
+		if(revision == 0) {
+			return "Empty log";
+		}
+		return inform.commitMessages.get(revision - 1) + "\n"
+				+ inform.timestamps.get(revision - 1);
 	}
 }

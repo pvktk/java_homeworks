@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 
 public class GitCli {
 	public static void main(String[] args) throws JsonGenerationException, JsonMappingException, IOException {
-		System.out.println("args");
+		System.out.println("number of args = " + args.length);
 		for (int i = 0; i < args.length; i++) {
 			System.out.println(args[i]);
 		}
@@ -39,6 +39,8 @@ public class GitCli {
 				revision = args.length == 2 ? Integer.parseInt(args[1]) : -1;
 				System.out.println("Log: " + core.getLog(revision));
 				break;
+			default:
+				System.out.println("Unknown argument: " + args[0]);
 		}
 		} catch (UnversionedException e) {
 			System.out.println("This directory is not versioned");
