@@ -7,9 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -19,10 +17,10 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class GitCore {
-	RepInformation inform = null;
-	Path informPath = null;
-	final String infoFileName = ".myGitData";
-	final String storageFolder = ".mygitdata";
+	private RepInformation inform = null;
+	private Path informPath = null;
+	private final String infoFileName = ".myGitData";
+	private final String storageFolder = ".mygitdata";
 
 	private void findRepInformation() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
 		RepInformation result = null;
@@ -87,7 +85,7 @@ public class GitCore {
 		int revision = inform.revision;
 		Path storage = getStoragePath(filename, revision);
 		storage.getParent().toFile().mkdirs();
-		System.out.println("trying write file to " + storage);
+		//System.out.println("trying write file to " + storage);
 		Files.copy(Paths.get("").resolve(filename), getStoragePath(filename, revision));
 		ArrayList<Integer> revisions = inform.allFiles.get(getPathRealRelative(filename).toString());
 		if (revisions == null) {
@@ -110,8 +108,15 @@ public class GitCore {
 	
 	private void deleteVersionedFiles(File root) {
 		if (root.isFile()) {
-			if (inform.allFiles.containsKey(root.toPath().relativize(informPath))) {
-				System.out.println("deleting" + root.getName());
+			String key = informPath.toAbsolutePath()
+					.relativize(Paths.get(root.getAbsolutePath()))
+					.toString();
+		
+			//System.out.println("key: " + key);
+			
+			if (inform.allFiles.containsKey(key)) {
+				System.out.println("deleting " + root.getName());
+				root.delete();
 			}
 			return;
 		}
@@ -143,13 +148,14 @@ public class GitCore {
 				int revNumber = ent.getValue().get(revisionIdx);
 				Files.copy(informPath.resolve(storageFolder).resolve(ent.getKey() + revNumber),
 						informPath.resolve(ent.getKey()));
+				System.out.println("restored " + ent.getKey());
 			}
 		}
 	}
 	
 	void makeCheckout(int revision) throws IOException, UnversionedException {
 		findRepInformation();
-		deleteVersionedFiles(informPath.toFile());
+		deleteVersionedFiles(informPath.toAbsolutePath().toFile());
 		restoreVersionedFiles(revision);
 	}
 	
@@ -166,6 +172,9 @@ public class GitCore {
 			}
 			
 		}
+		inform.revision = revision;
+		inform.commitMessages.subList(revision , inform.commitMessages.size()).clear();
+		inform.timestamps.subList(revision, inform.timestamps.size()).clear();
 		updateRepInformation();
 	}
 	
@@ -177,7 +186,12 @@ public class GitCore {
 		if(revision == 0) {
 			return "Empty log";
 		}
-		return inform.commitMessages.get(revision - 1) + "\n"
+		return "revision: " + revision + "\n"
+			+ inform.commitMessages.get(revision - 1) + "\n"
 				+ inform.timestamps.get(revision - 1);
+	}
+	
+	int getCurrentRevision() {
+		return inform.revision;
 	}
 }

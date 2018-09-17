@@ -8,10 +8,6 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 
 public class GitCli {
 	public static void main(String[] args) throws JsonGenerationException, JsonMappingException, IOException {
-		System.out.println("number of args = " + args.length);
-		for (int i = 0; i < args.length; i++) {
-			System.out.println(args[i]);
-		}
 		
 		GitCore core = new GitCore();
 		int revision;
@@ -24,6 +20,7 @@ public class GitCli {
 			case "commit":
 				System.out.println("Commiting...");
 				core.makeCommit(args[1], Arrays.copyOfRange(args, 2, args.length));
+				System.out.println("Commit made at revision " + core.getCurrentRevision());
 				break;
 			case "checkout":
 				revision = Integer.parseInt(args[1]);
