@@ -22,7 +22,7 @@ public class GitCore {
 	private final String infoFileName = ".myGitData";
 	private final String storageFolder = ".mygitdata";
 
-	private void findRepInformation() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
+	void findRepInformation() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
 		RepInformation result = null;
 		Path p = Paths.get("");
 		
