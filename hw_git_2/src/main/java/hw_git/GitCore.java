@@ -2,14 +2,19 @@ package hw_git;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.apache.commons.io.FileUtils;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -21,6 +26,7 @@ public class GitCore {
 	private Path informPath = null;
 	private final String infoFileName = ".myGitData";
 	private final String storageFolder = ".mygitdata";
+	private final String stageFolder = ".stageData";
 
 	void findRepInformation() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
 		RepInformation result = null;
@@ -44,7 +50,6 @@ public class GitCore {
 	
 	private void updateRepInformation() throws JsonGenerationException, JsonMappingException, IOException {
 		ObjectMapper omapper = new ObjectMapper();
-		System.out.println("writing to path: " + informPath.toString());
 		omapper.writeValue(informPath.resolve(infoFileName).toFile(), inform);
 	}
 	
@@ -52,11 +57,8 @@ public class GitCore {
 		try {
 		findRepInformation();
 		} catch (UnversionedException e) {
-			//ObjectMapper omapper = new ObjectMapper();
-			//omapper.writeValue(Paths.get("").resolve(filename).toFile(), new RepInformation());
 			informPath = Paths.get("");
 			inform = new RepInformation();
-			//inform.allFiles.put(Paths.get(""), 0);
 			updateRepInformation();
 			System.out.println("Ok.");
 		}
@@ -70,39 +72,68 @@ public class GitCore {
 		return informPath.relativize(Paths.get("")).resolve(filename);
 	}
 	
-	private Path getStoragePath(String filename, int revision) {
-		Path rel = getPathRealRelative(filename);
-		String fname = rel.getFileName().toString();
-		
-		rel = rel.getParent();
-		
-		Path storage = informPath.resolve(storageFolder).resolve(rel).resolve(fname + revision);
-		
-		return storage;
-	}
-	
-	private void addFile(String filename) throws IOException {
+	private void addFile(Path filename) throws IOException {
 		int revision = inform.revision;
-		Path storage = getStoragePath(filename, revision);
+		Path keyPath = filename.subpath(1, filename.getNameCount());
+		Path storage = informPath.resolve(storageFolder)
+				.resolve(keyPath.getParent())
+				.resolve(keyPath.getFileName().toString() + revision);
 		storage.getParent().toFile().mkdirs();
-		//System.out.println("trying write file to " + storage);
-		Files.copy(Paths.get("").resolve(filename), getStoragePath(filename, revision));
-		ArrayList<Integer> revisions = inform.allFiles.get(getPathRealRelative(filename).toString());
+		Files.copy(filename, storage);
+		String keyName = keyPath.toString();
+		ArrayList<Integer> revisions = inform.allFiles.get(keyName);
 		if (revisions == null) {
 			revisions = new ArrayList<>();
-			inform.allFiles.put(getPathRealRelative(filename).toString(), revisions);
+			inform.allFiles.put(keyName, revisions);
 		}
 		revisions.add(revision);
 	}
 	
-	void makeCommit(String message, String[] filenames) throws IOException, UnversionedException {
+	void makeAdd(String[] filenames) throws IOException, UnversionedException {
+		findRepInformation();
+		for (String fname : filenames) {
+			Path orig = getPathRealRelative(fname);
+			Path dest = informPath.resolve(stageFolder).resolve(orig);
+			//Files.copy(orig, dest);
+			FileUtils.copyFile(orig.toFile(), dest.toFile());
+		}
+	}
+	
+	void makeCommit(String message) throws IOException, UnversionedException {
 		findRepInformation();
 		increaseRevisionNumber();
 		inform.commitMessages.add(message);
 		inform.timestamps.add(new Timestamp(System.currentTimeMillis()));
-		for (String fname : filenames) {
-			addFile(fname);
-		}
+		Files.walkFileTree(
+				informPath.resolve(stageFolder),
+				new FileVisitor<Path>() {
+
+			@Override
+			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+				// TODO Auto-generated method stub
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				System.out.println("walking " + file);
+				addFile(file);
+				Files.delete(file);
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+				// TODO Auto-generated method stub
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+				// TODO Auto-generated method stub
+				return FileVisitResult.CONTINUE;
+			}
+		});
 		updateRepInformation();
 	}
 	
@@ -146,8 +177,8 @@ public class GitCore {
 			int revisionIdx = getIndexOfLessEq(ent.getValue(), revision);
 			if (revisionIdx >= 0) {
 				int revNumber = ent.getValue().get(revisionIdx);
-				Files.copy(informPath.resolve(storageFolder).resolve(ent.getKey() + revNumber),
-						informPath.resolve(ent.getKey()));
+				FileUtils.copyFile(informPath.resolve(storageFolder).resolve(ent.getKey() + revNumber).toFile(),
+						informPath.resolve(ent.getKey()).toFile());
 				System.out.println("restored " + ent.getKey());
 			}
 		}

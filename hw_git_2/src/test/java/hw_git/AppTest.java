@@ -58,8 +58,10 @@ public class AppTest extends Assert {
     @Test
     public void testCheckout() throws JsonGenerationException, JsonMappingException, IOException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"commit", "message 1", "testdir/file.txt"});
-    	GitCli.main(new String[] {"commit", "message 2", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"commit", "message 2"});
     	
     	GitCli.main(new String[] {"checkout", "1"});
     	assertTrue(Files.exists(Paths.get("testdir/file.txt")));
@@ -76,14 +78,17 @@ public class AppTest extends Assert {
     	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
     		out.print("commit 1 content");
     	}
-    	GitCli.main(new String[] {"commit", "message 1", "testdir/file.txt"});
-    	GitCli.main(new String[] {"commit", "message 2", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"commit", "message 2"});
     	
     	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
     		out.print("commit 3 content");
     	}
     	
-    	GitCli.main(new String[] {"commit", "message 3", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 3"});
     	
     	GitCli.main(new String[] {"checkout", "2"});
     	try (Scanner in = new Scanner(new File("testdir/file.txt"))) {
@@ -99,12 +104,14 @@ public class AppTest extends Assert {
     @Test
     public void testReset() throws JsonGenerationException, JsonMappingException, IOException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"commit", "message 1", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
     	String s1;
     	try (Scanner in = new Scanner(new File(".myGitData"))) {
     		s1 = in.nextLine();
     	}
-    	GitCli.main(new String[] {"commit", "message 2", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"commit", "message 2"});
     	GitCli.main(new String[] {"reset", "1"});
     	String s2;
     	try (Scanner in = new Scanner(new File(".myGitData"))) {

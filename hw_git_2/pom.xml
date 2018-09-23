@@ -3,11 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>1</groupId>
-  <artifactId>hw_git_1</artifactId>
+  <artifactId>hw_git_2</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>hw_git_1</name>
+  <name>hw_git_2</name>
   <url>http://maven.apache.org</url>
 
   <properties>

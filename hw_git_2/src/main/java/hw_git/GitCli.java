@@ -17,9 +17,13 @@ public class GitCli {
 			case "init":
 				core.makeInit();
 				break;
+			case "add":
+				System.out.println("Addition...");
+				core.makeAdd(Arrays.copyOfRange(args, 1, args.length));
+				break;
 			case "commit":
 				System.out.println("Commiting...");
-				core.makeCommit(args[1], Arrays.copyOfRange(args, 2, args.length));
+				core.makeCommit(args[1]);
 				System.out.println("Commit made at revision " + core.getCurrentRevision());
 				break;
 			case "checkout":
