@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Scanner;
 
 import org.apache.commons.io.FileUtils;
@@ -73,6 +74,24 @@ public class AppTest extends Assert {
     }
     
     @Test
+    public void testCheckoutFiles() throws JsonGenerationException, JsonMappingException, IOException {
+    	GitCli.main(new String[] {"init"});
+    	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
+    		out.println("text 1");
+    	}
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
+    		out.println("text 2");
+    	}
+    	
+    	GitCli.main(new String[] {"checkout", "--", "testdir/file.txt"});
+    	try (Scanner in = new Scanner(new File("testdir/file.txt"))) {
+    		assertTrue(in.nextLine().equals("text 1"));
+    	}
+    }
+    
+    @Test
     public void testFileChangeBetweenCommits() throws JsonGenerationException, JsonMappingException, IOException {
     	GitCli.main(new String[] {"init"});
     	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
@@ -118,5 +137,40 @@ public class AppTest extends Assert {
     		s2 = in.nextLine();
     	}
     	assertEquals(s1, s2);
+    }
+    
+    @Test
+    public void testRM() throws JsonGenerationException, JsonMappingException, IOException {
+    	GitCli.main(new String[] {"init"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	Files.delete(Paths.get("testdir/file.txt"));
+    	GitCli.main(new String[] {"rm", "testdir/file.txt"});
+    	GitCli.main(new String[] {"checkout", "1"});
+    	assertFalse(Files.exists(Paths.get("testdir/file.txt")));
+    }
+    
+    @Test
+    public void testStatus() throws JsonGenerationException, JsonMappingException, IOException, UnversionedException {
+    	GitCli.main(new String[] {"init"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	
+    	GitCore core = new GitCore();
+    	core.findRepInformation();
+    	
+    	assertEquals(core.getChangedFiles(), Arrays.asList());
+    	//assertEquals(core.getUntrackedFiles(), Arrays.asList("testdir/dir1/file_d1.txt"));
+    	assertEquals(core.getDeletedFiles(), Arrays.asList());
+    	
+    	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
+    		out.print("commit 3 content");
+    	}
+    	
+    	assertEquals(core.getChangedFiles(), Arrays.asList("testdir/file.txt"));
+    	
+    	Files.delete(Paths.get("testdir/file.txt"));
+    	
+    	assertEquals(core.getDeletedFiles(), Arrays.asList("testdir/file.txt"));
     }
 }

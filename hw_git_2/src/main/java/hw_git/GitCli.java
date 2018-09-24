@@ -27,9 +27,13 @@ public class GitCli {
 				System.out.println("Commit made at revision " + core.getCurrentRevision());
 				break;
 			case "checkout":
-				revision = Integer.parseInt(args[1]);
-				System.out.println("Check out to revision " + revision);
-				core.makeCheckout(revision);
+				try {
+					revision = Integer.parseInt(args[1]);
+					System.out.println("Check out to revision " + revision);
+					core.makeCheckout(revision);
+				} catch (NumberFormatException e) {
+					core.makeCheckout(Arrays.copyOfRange(args, 2, args.length));
+				}
 				break;
 			case "reset":
 				revision = Integer.parseInt(args[1]);
@@ -39,6 +43,26 @@ public class GitCli {
 			case "log":
 				revision = args.length == 2 ? Integer.parseInt(args[1]) : -1;
 				System.out.println("Log: " + core.getLog(revision));
+				break;
+			case "rm":
+				System.out.println("Removing...");
+				core.makeRM(Arrays.copyOfRange(args, 1, args.length));
+				break;
+			case "status":
+				core.findRepInformation();
+				System.out.println("Status:");
+				System.out.println("Deleted files:\n________________");
+				for (String fname : core.getDeletedFiles()) {
+					System.out.println(fname);
+				}
+				System.out.println("Changed files:\n________________");
+				for (String fname : core.getChangedFiles()) {
+					System.out.println(fname);
+				}
+				System.out.println("Untracked files:\n________________");
+				for (String fname : core.getUntrackedFiles()) {
+					System.out.println(fname);
+				}
 				break;
 			default:
 				System.out.println("Unknown argument: " + args[0]);

@@ -11,6 +11,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -27,7 +28,10 @@ public class GitCore {
 	private final String infoFileName = ".myGitData";
 	private final String storageFolder = ".mygitdata";
 	private final String stageFolder = ".stageData";
-
+	
+	private int getLastItem(ArrayList<Integer> list) {
+		return list.get(list.size() - 1);
+	}
 	void findRepInformation() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
 		RepInformation result = null;
 		Path p = Paths.get("");
@@ -69,17 +73,21 @@ public class GitCore {
 	}
 	
 	private Path getPathRealRelative(String filename) {
-		return informPath.relativize(Paths.get("")).resolve(filename);
+		return informPath.relativize(Paths.get(filename));
 	}
 	
-	private void addFile(Path filename) throws IOException {
+	private Path getStoragePath(Path keyPath, int revision) {
+		return informPath.resolve(storageFolder)
+		.resolve(keyPath.getParent())
+		.resolve(keyPath.getFileName().toString() + revision);
+	}
+	
+	private void addFile(Path filepath) throws IOException {
 		int revision = inform.revision;
-		Path keyPath = filename.subpath(1, filename.getNameCount());
-		Path storage = informPath.resolve(storageFolder)
-				.resolve(keyPath.getParent())
-				.resolve(keyPath.getFileName().toString() + revision);
+		Path keyPath = filepath.subpath(1, filepath.getNameCount());
+		Path storage = getStoragePath(keyPath, revision);
 		storage.getParent().toFile().mkdirs();
-		Files.copy(filename, storage);
+		Files.copy(filepath, storage);
 		String keyName = keyPath.toString();
 		ArrayList<Integer> revisions = inform.allFiles.get(keyName);
 		if (revisions == null) {
@@ -116,7 +124,6 @@ public class GitCore {
 
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-				System.out.println("walking " + file);
 				addFile(file);
 				Files.delete(file);
 				return FileVisitResult.CONTINUE;
@@ -142,11 +149,8 @@ public class GitCore {
 			String key = informPath.toAbsolutePath()
 					.relativize(Paths.get(root.getAbsolutePath()))
 					.toString();
-		
-			//System.out.println("key: " + key);
 			
 			if (inform.allFiles.containsKey(key)) {
-				System.out.println("deleting " + root.getName());
 				root.delete();
 			}
 			return;
@@ -179,7 +183,6 @@ public class GitCore {
 				int revNumber = ent.getValue().get(revisionIdx);
 				FileUtils.copyFile(informPath.resolve(storageFolder).resolve(ent.getKey() + revNumber).toFile(),
 						informPath.resolve(ent.getKey()).toFile());
-				System.out.println("restored " + ent.getKey());
 			}
 		}
 	}
@@ -188,6 +191,17 @@ public class GitCore {
 		findRepInformation();
 		deleteVersionedFiles(informPath.toAbsolutePath().toFile());
 		restoreVersionedFiles(revision);
+	}
+	
+	void makeCheckout(String[] files) throws JsonParseException, JsonMappingException, IOException, UnversionedException {
+		findRepInformation();
+		for (String fname : files) {
+			String key = getPathRealRelative(fname).toString();
+			System.out.println("checkout key: " + key);
+			FileUtils.copyFile(getStoragePath(getPathRealRelative(fname),
+						getLastItem(inform.allFiles.get(key))).toFile(),
+					informPath.resolve(key).toFile());
+		}
 	}
 	
 	void makeReset(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException {
@@ -222,7 +236,93 @@ public class GitCore {
 				+ inform.timestamps.get(revision - 1);
 	}
 	
+	List<String> getDeletedFiles() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
+		ArrayList<String> result = new ArrayList<>();
+		findRepInformation();
+		
+		for (String keypath : inform.allFiles.keySet()) {
+			if (!Files.exists(informPath.resolve(keypath))) {
+				result.add(Paths.get("").relativize(Paths.get(keypath)).toString());
+			}
+		}
+
+		return result;
+	}
+	
+	List<String> getChangedFiles() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
+		ArrayList<String> result = new ArrayList<>();
+		findRepInformation();
+		
+		for (String keypath : inform.allFiles.keySet()) {
+			if (Files.exists(informPath.resolve(keypath))
+					&& !FileUtils.contentEquals(
+							informPath.resolve(keypath).toFile(),
+							getStoragePath(Paths.get(keypath), getLastItem(inform.allFiles.get(keypath))
+									).toFile()
+							)) {
+				result.add(Paths.get("").relativize(Paths.get(keypath)).toString());
+			}
+		}
+
+		return result;
+	}
+	
+	List<String> getUntrackedFiles() throws IOException {
+		ArrayList<String> result = new ArrayList<>();
+		Files.walkFileTree(Paths.get(""), new FileVisitor<Path>() {
+
+			@Override
+			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+				// TODO Auto-generated method stub
+				return dir.equals(Paths.get(stageFolder)) || dir.equals(Paths.get(storageFolder))
+						? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				// TODO Auto-generated method stub
+				if (!inform.allFiles.containsKey(informPath.relativize(file).toString())) {
+					result.add(file.toString());
+				}
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+				// TODO Auto-generated method stub
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+				// TODO Auto-generated method stub
+				return FileVisitResult.CONTINUE;
+			}
+		});
+		
+		return result;
+	}
+	
 	int getCurrentRevision() {
 		return inform.revision;
+	}
+	
+	
+	private void removeFromRep(String filename) throws IOException {
+		Path keypath = getPathRealRelative(filename);
+		System.out.println("keypath: " + keypath);
+		for (int revision : inform.allFiles.get(keypath.toString())) {
+			Files.delete(getStoragePath(keypath, revision));
+		}
+		Files.deleteIfExists(informPath.resolve(stageFolder).resolve(keypath));
+		inform.allFiles.remove(keypath.toString());
+	}
+	
+	void makeRM(String[] files) throws IOException, UnversionedException {
+		findRepInformation();
+		for (String filename : files) {
+			removeFromRep(filename);
+		}
+		updateRepInformation();
 	}
 }
