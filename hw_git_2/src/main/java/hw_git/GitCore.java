@@ -79,7 +79,7 @@ public class GitCore {
 	private Path getStoragePath(Path keyPath, int revision) {
 		return informPath.resolve(storageFolder)
 		.resolve(keyPath.getParent())
-		.resolve(keyPath.getFileName().toString() + revision);
+		.resolve(keyPath.getFileName().toString() + "r" + revision);
 	}
 	
 	private void addFile(Path filepath) throws IOException {
@@ -181,7 +181,8 @@ public class GitCore {
 			int revisionIdx = getIndexOfLessEq(ent.getValue(), revision);
 			if (revisionIdx >= 0) {
 				int revNumber = ent.getValue().get(revisionIdx);
-				FileUtils.copyFile(informPath.resolve(storageFolder).resolve(ent.getKey() + revNumber).toFile(),
+				FileUtils.copyFile(
+						informPath.resolve(getStoragePath(Paths.get(ent.getKey()), revNumber)).toFile(),
 						informPath.resolve(ent.getKey()).toFile());
 			}
 		}
