@@ -73,7 +73,7 @@ public class GitCli {
 		} catch (BranchProblemException e) {
 			System.out.println(e.message);
 		} catch (FileNotFoundException e) {
-			System.out.println(e.getLocalizedMessage());
+			System.out.println(e.getMessage());
 		}
 	}
 }

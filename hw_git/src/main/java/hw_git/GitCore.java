@@ -98,6 +98,7 @@ public class GitCore {
 		if (inform.nCommits <= revision) {
 			inform.nCommits++;
 			inform.commitedFiles.add(new TreeSet<>());
+			inform.removedFiles.add(new TreeSet<>());
 			inform.prevCommit.add(inform.branchEnds.get(inform.currentBranchNumber));
 			inform.branchEnds.put(inform.currentBranchNumber, revision);
 			inform.numberOfStartedBranchesAtRevision.add(0);
@@ -180,23 +181,22 @@ public class GitCore {
 	}
 	
 	private void restoreVersionedFiles(int revision) throws IOException {
-		Set<Integer> restoredNumbers = new TreeSet<>();
-		while (revision >= 0) {
-			Set<Integer> revFiles = inform.commitedFiles.get(revision);
-			for (Integer fileNumber : revFiles) {
-				if (restoredNumbers.contains(fileNumber)) {
-					continue;
-				}
-				
-				restoredNumbers.add(fileNumber);
-				
-				String keyName = inform.getStringByNumber(fileNumber, inform.fileNumber);
-				FileUtils.copyFile(
-						informPath.resolve(getStoragePath(Paths.get(keyName), revision)).toFile(),
-						informPath.resolve(keyName).toFile());
-				
-			}
-			revision = inform.prevCommit.get(revision);
+		if (revision < 0) {
+			return;
+		}
+		
+		restoreVersionedFiles(inform.prevCommit.get(revision));
+		
+		for (Integer fileNumber : inform.commitedFiles.get(revision)) {
+			String keyName = RepInformation.getStringByNumber(fileNumber, inform.fileNumber);
+			FileUtils.copyFile(
+					informPath.resolve(getStoragePath(Paths.get(keyName), revision)).toFile(),
+					informPath.resolve(keyName).toFile());
+		}
+		
+		for (Integer fileNumber : inform.removedFiles.get(revision)) {
+			String keyName = RepInformation.getStringByNumber(fileNumber, inform.fileNumber);
+			FileUtils.forceDelete(informPath.resolve(keyName).toFile());
 		}
 	}
 	
@@ -341,16 +341,16 @@ public class GitCore {
 	
 	private void removeFromRep(String filename) throws IOException {
 		Path keypath = getKeyPath(filename);
-		System.out.println("keypath: " + keypath);
-		for (int revision = inform.currentBranchLastRevision();
-				revision >= 0;
-				revision = inform.prevCommit.get(revision)) {
-			if (inform.commitedFiles.get(revision).remove(inform.fileNumber.get(keypath.toString()))) {
-				System.out.println("keypath: " + keypath.toString());
-				Files.delete(getStoragePath(keypath, revision));
-				break;
-			}
+		int revision = inform.revision;
+		
+		Integer fileNumber = inform.fileNumber.get(keypath.toString());
+		
+		if (fileNumber == null) {
+			throw new FileNotFoundException("File not versioned: " + filename);
 		}
+
+		inform.removedFiles.get(revision).add(fileNumber);
+		
 		Files.deleteIfExists(informPath.resolve(stageFolder).resolve(keypath));
 		//inform.fileNumber.remove(keypath.toString());
 	}
@@ -390,7 +390,7 @@ public class GitCore {
 			for (Integer fileNumber : inform.commitedFiles.get(revision)) {
 				FileUtils.forceDelete(
 						getStoragePath(
-								Paths.get(inform.getStringByNumber(fileNumber, inform.fileNumber)), revision)
+								Paths.get(RepInformation.getStringByNumber(fileNumber, inform.fileNumber)), revision)
 						.toFile());
 			}
 			inform.commitedFiles.get(revision).clear();

@@ -39,7 +39,7 @@ public class RepInformation {
 		branchEnds.put(0, -1);
 	}
 
-	String getStringByNumber(Integer i, Map<String, Integer> map) {
+	static String getStringByNumber(Integer i, Map<String, Integer> map) {
 		for (Entry<String, Integer> ent : map.entrySet()) {
 			if (ent.getValue().equals(i)) {
 				return ent.getKey();
