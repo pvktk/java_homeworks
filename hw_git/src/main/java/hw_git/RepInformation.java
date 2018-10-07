@@ -14,6 +14,7 @@ public class RepInformation {
 	int currentBranchNumber = 0;
 	int nCommits = 0;
 	int nFiles = 0;
+	int lastBranchNumber = 0;
 
 	ArrayList<String> commitMessages = new ArrayList<>();
 
@@ -22,6 +23,8 @@ public class RepInformation {
 	ArrayList<Integer> prevCommit = new ArrayList<>();
 
 	ArrayList<Set<Integer>> commitedFiles = new ArrayList<>();
+	
+	ArrayList<Set<Integer>> removedFiles = new ArrayList<>();
 
 	TreeMap<String, Integer> fileNumber = new TreeMap<>();
 
@@ -29,8 +32,10 @@ public class RepInformation {
 	
 	TreeMap<Integer, Integer> branchEnds = new TreeMap<>();
 	
+	ArrayList<Integer> numberOfStartedBranchesAtRevision = new ArrayList<>();
+
 	public RepInformation() {
-		branchNumbers.put("master", -1);
+		branchNumbers.put("master", 0);
 		branchEnds.put(0, -1);
 	}
 
@@ -51,7 +56,9 @@ public class RepInformation {
 	int currentBranchLastRevision() {
 		return branchEnds.get(currentBranchNumber);
 	}
-	
+
+// Automatic getters and setters
+
 	public int getRevision() {
 		return revision;
 	}
@@ -107,6 +114,14 @@ public class RepInformation {
 	public void setCommitedFiles(ArrayList<Set<Integer>> commitedFiles) {
 		this.commitedFiles = commitedFiles;
 	}
+	
+	public ArrayList<Set<Integer>> getRemovedFiles() {
+		return removedFiles;
+	}
+
+	public void setRemovedFiles(ArrayList<Set<Integer>> removedFiles) {
+		this.removedFiles = removedFiles;
+	}
 
 	public TreeMap<String, Integer> getFileNumber() {
 		return fileNumber;
@@ -138,5 +153,21 @@ public class RepInformation {
 
 	public void setnFiles(int nFiles) {
 		this.nFiles = nFiles;
+	}
+	
+	public int getLastBranchNumber() {
+		return lastBranchNumber;
+	}
+
+	public void setLastBranchNumber(int lastBranchNumber) {
+		this.lastBranchNumber = lastBranchNumber;
+	}
+	
+	public ArrayList<Integer> getNumberOfStartedBranchesAtRevision() {
+		return numberOfStartedBranchesAtRevision;
+	}
+
+	public void setNumberOfStartedBranchesAtRevision(ArrayList<Integer> numberOfStartedBrancesAtRevision) {
+		this.numberOfStartedBranchesAtRevision = numberOfStartedBrancesAtRevision;
 	}
 }

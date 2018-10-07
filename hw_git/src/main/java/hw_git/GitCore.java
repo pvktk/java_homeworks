@@ -69,6 +69,10 @@ public class GitCore {
 		inform.revision++;
 	}
 	
+	void addAtIdx(ArrayList<Integer> list, int idx, int inc) {
+		list.set(idx, list.get(idx) + inc);
+	}
+	
 	private Path getKeyPath(String filename) {
 		return informPath.relativize(Paths.get(filename));
 	}
@@ -96,6 +100,7 @@ public class GitCore {
 			inform.commitedFiles.add(new TreeSet<>());
 			inform.prevCommit.add(inform.branchEnds.get(inform.currentBranchNumber));
 			inform.branchEnds.put(inform.currentBranchNumber, revision);
+			inform.numberOfStartedBranchesAtRevision.add(0);
 		}
 
 		Set<Integer> currentRevisionFiles = inform.commitedFiles.get(revision);
@@ -113,8 +118,11 @@ public class GitCore {
 		}
 	}
 	
-	void makeCommit(String message) throws IOException, UnversionedException {
+	void makeCommit(String message) throws IOException, UnversionedException, BranchProblemException {
 		findRepInformation();
+		if (inform.revision != inform.currentBranchLastRevision()) {
+			throw new BranchProblemException("Staying not at end of some branch");
+		}
 		increaseRevisionNumber();
 		inform.commitMessages.add(message);
 		inform.timestamps.add(new Timestamp(System.currentTimeMillis()));
@@ -197,6 +205,19 @@ public class GitCore {
 		findRepInformation();
 		deleteVersionedFiles(informPath.toAbsolutePath().toFile());
 		restoreVersionedFiles(revision);
+		inform.revision = revision;
+		updateRepInformation();
+	}
+	
+	void makeCheckout(String branchName) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
+		findRepInformation();
+		Integer branchNumber = inform.branchNumbers.get(branchName);
+		if (branchNumber == null) {
+			throw new BranchProblemException("Branch not exists: " + branchName);
+		}
+
+		int branchRevision = inform.branchEnds.get(branchNumber);
+		makeCheckout(branchRevision);
 	}
 	
 	private int getLastRevisionOfFile(String keyName) {
@@ -324,13 +345,14 @@ public class GitCore {
 		for (int revision = inform.currentBranchLastRevision();
 				revision >= 0;
 				revision = inform.prevCommit.get(revision)) {
-			if (inform.commitedFiles.get(revision).contains(inform.fileNumber.get(keypath.toString()))) {
+			if (inform.commitedFiles.get(revision).remove(inform.fileNumber.get(keypath.toString()))) {
+				System.out.println("keypath: " + keypath.toString());
 				Files.delete(getStoragePath(keypath, revision));
-				inform.commitedFiles.get(revision).remove(inform.fileNumber.get(keypath.toString()));
+				break;
 			}
 		}
 		Files.deleteIfExists(informPath.resolve(stageFolder).resolve(keypath));
-		inform.fileNumber.remove(keypath.toString());
+		//inform.fileNumber.remove(keypath.toString());
 	}
 	
 	void makeRM(String[] files) throws IOException, UnversionedException {
@@ -338,6 +360,47 @@ public class GitCore {
 		for (String filename : files) {
 			removeFromRep(filename);
 		}
+		updateRepInformation();
+	}
+	
+	void makeBranch(String branchName) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
+		findRepInformation();
+		if (inform.branchNumbers.containsKey(branchName)) {
+			throw new BranchProblemException("Branch already exists: " + branchName);
+		}
+		
+		Integer newBranchNumber = inform.lastBranchNumber++;
+		inform.branchNumbers.put(branchName, newBranchNumber);
+		inform.branchEnds.put(newBranchNumber, inform.revision);
+		addAtIdx(inform.numberOfStartedBranchesAtRevision, inform.revision, 1);
+		updateRepInformation();
+	}
+	
+	void makeDeleteBranch(String branchName) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
+		findRepInformation();
+		Integer branchNumber = inform.branchNumbers.get(branchName);
+		if (branchNumber == null) {
+			throw new BranchProblemException("No such branch: " + branchName);
+		}
+		
+		int revision = inform.branchEnds.get(branchNumber);
+		inform.branchEnds.remove(branchNumber);
+		
+		while (revision >= 0 && inform.numberOfStartedBranchesAtRevision.get(revision) == 0) {
+			for (Integer fileNumber : inform.commitedFiles.get(revision)) {
+				FileUtils.forceDelete(
+						getStoragePath(
+								Paths.get(inform.getStringByNumber(fileNumber, inform.fileNumber)), revision)
+						.toFile());
+			}
+			inform.commitedFiles.get(revision).clear();
+			revision = inform.prevCommit.get(revision);
+		}
+		
+		if (revision >= 0) {
+			addAtIdx(inform.numberOfStartedBranchesAtRevision, revision, -1);
+		}
+		
 		updateRepInformation();
 	}
 }

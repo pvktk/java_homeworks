@@ -146,10 +146,15 @@ public class AppTest extends Assert {
     	GitCli.main(new String[] {"init"});
     	GitCli.main(new String[] {"add", "testdir/file.txt"});
     	GitCli.main(new String[] {"commit", "message 1"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 2"});
     	Files.delete(Paths.get("testdir/file.txt"));
     	GitCli.main(new String[] {"rm", "testdir/file.txt"});
-    	GitCli.main(new String[] {"checkout", "1"});
+    	GitCli.main(new String[] {"checkout", "2"});
     	assertFalse(Files.exists(Paths.get("testdir/file.txt")));
+    	
+    	GitCli.main(new String[] {"checkout", "1"});
+    	assertTrue(Files.exists(Paths.get("testdir/file.txt")));
     }
     
     @Test

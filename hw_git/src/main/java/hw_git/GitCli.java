@@ -1,5 +1,6 @@
 package hw_git;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -69,6 +70,10 @@ public class GitCli {
 		}
 		} catch (UnversionedException e) {
 			System.out.println("This directory is not versioned");
+		} catch (BranchProblemException e) {
+			System.out.println(e.message);
+		} catch (FileNotFoundException e) {
+			System.out.println(e.getLocalizedMessage());
 		}
 	}
 }
