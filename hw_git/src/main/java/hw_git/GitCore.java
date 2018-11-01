@@ -29,8 +29,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class GitCore {
 	private RepInformation inform = null;
 	private Path informPath = null;
-	private final String infoFileName = ".myGitData";
-	private final String storageFolder = ".mygitdata";
+	private final String infoFileName = ".myGitDataFile";
+	private final String storageFolder = ".myGitDataStorage";
 	private final String stageFolder = ".stageData";
 	
 	void findRepInformation() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
@@ -124,7 +124,7 @@ public class GitCore {
 		if (inform.revision != inform.currentBranchLastRevision()) {
 			throw new BranchProblemException("Staying not at end of some branch");
 		}
-		//increaseRevisionNumber();
+
 		inform.revision = inform.nCommits;
 		inform.commitMessages.add(message);
 		inform.timestamps.add(new Timestamp(System.currentTimeMillis()));

@@ -25,7 +25,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 public class AppTest extends Assert {
-
+	
+	final String storageFilename = ".myGitDataFile";
+	final String storageFolder = ".myGitDataStorage";
 	@Before
 	public void setUp() throws IOException {
 		//System.out.println("setUp");
@@ -38,9 +40,9 @@ public class AppTest extends Assert {
 	public void tearDown() throws IOException {
 		//System.out.println("tearDown");
 		FileUtils.deleteDirectory(Paths.get("testdir").toFile());
-		FileUtils.deleteDirectory(Paths.get(".mygitdata").toFile());
-		if (Files.exists(Paths.get(".myGitData"))) {
-			Files.delete(Paths.get(".myGitData"));
+		FileUtils.deleteDirectory(Paths.get(storageFolder).toFile());
+		if (Files.exists(Paths.get(storageFilename))) {
+			Files.delete(Paths.get(storageFilename));
 		}
 	}
 	
@@ -138,7 +140,7 @@ public class AppTest extends Assert {
     	GitCli.main(new String[] {"commit", "message 2"});
     	GitCli.main(new String[] {"reset", "1"});
     	String s2;
-    	try (Scanner in = new Scanner(new File(".myGitData"))) {
+    	try (Scanner in = new Scanner(new File(storageFilename))) {
     		s2 = in.nextLine();
     	}
     	assertEquals(s1, s2);

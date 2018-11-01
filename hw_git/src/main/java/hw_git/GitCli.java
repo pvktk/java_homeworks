@@ -141,6 +141,8 @@ public class GitCli {
 			System.out.println(e.getMessage());
 		} catch (IOException e) {
 			System.out.println("IOException: " + e.getMessage());
+		} catch (ArrayIndexOutOfBoundsException e) {
+			System.out.println("Lack of arguments");
 		}
 	}
 }

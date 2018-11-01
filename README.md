@@ -1,7 +1,8 @@
 ## Мой GIT.
-Для запуска выполните
+Пример использования:
+
 ```
 
-mvn exec:java -Dexec.mainClass=hw_git.GitCli -Dexec.args="commit commessage testdir/file1"
+./mygit commit "добавлен первый файл в репозиторий"
 
 ```
