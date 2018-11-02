@@ -38,8 +38,8 @@ public class RepInformation {
 		branchEnds.put(0, -1);
 	}
 
-	static String getStringByNumber(Integer i, Map<String, Integer> map) {
-		for (Entry<String, Integer> ent : map.entrySet()) {
+	static <K, V> K getKeyByValue(V i, Map<K, V> map) {
+		for (Entry<K, V> ent : map.entrySet()) {
 			if (ent.getValue().equals(i)) {
 				return ent.getKey();
 			}
@@ -49,7 +49,7 @@ public class RepInformation {
 	}
 	
 	String getCurrentBranchName() {
-		return getStringByNumber(currentBranchNumber, branchNumbers);
+		return getKeyByValue(currentBranchNumber, branchNumbers);
 	}
 	
 	int currentBranchLastRevision() {

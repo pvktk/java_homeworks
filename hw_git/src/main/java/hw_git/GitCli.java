@@ -26,7 +26,7 @@ public class GitCli {
 	}
 
 	public static Path conflictFileChooser(Path p1, Path p2) {
-		System.out.println("merge conflict between " + p1.toString() + "and" + p2.toString());
+		System.out.println("merge conflict between " + p1.toString() + " and " + p2.toString());
 		printFile(p1);
 		printFile(p2);
 		int choice = 0;
@@ -71,7 +71,7 @@ public class GitCli {
 			case "commit":
 				System.out.println("Commiting...");
 				core.makeCommit(args[1]);
-				System.out.println("Commit made at revision " + core.getCurrentRevision());
+				System.out.println("Commit made at revision " + (core.getCurrentRevision() + 1));
 				break;
 			case "checkout":
 				if (args[1].equals("--")) {
@@ -94,7 +94,7 @@ public class GitCli {
 				core.makeReset(revision);
 				break;
 			case "log":
-				revision = args.length == 2 ? Integer.parseInt(args[1]) : -1;
+				revision = args.length == 2 ? Integer.parseInt(args[1]) : 0;
 				System.out.println("Log: " + core.getLog(revision - 1));
 				break;
 			case "rm":
@@ -127,7 +127,7 @@ public class GitCli {
 				}
 				break;
 			case "merge":
-				System.out.println("Merging branch " + args[1] + "to" + core.getCurrentBranchName());
+				System.out.println("Merging branch " + args[1] + " to " + core.getCurrentBranchName());
 				core.makeMerge(args[1], GitCli::conflictFileChooser);
 				break;
 			default:

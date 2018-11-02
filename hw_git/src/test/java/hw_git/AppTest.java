@@ -288,7 +288,7 @@ public class AppTest extends Assert {
     }
     
     @Test
-    public void testMerge() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
+    public void testMergeNoConflict() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
     	GitCli.main(new String[] {"add", "testdir/file.txt"});
     	GitCli.main(new String[] {"commit", "message 1"});
@@ -306,7 +306,6 @@ public class AppTest extends Assert {
 			
 			@Override
 			public Path apply(Path t, Path u) {
-				// TODO Auto-generated method stub
 				return null;
 			}
 		});
@@ -314,5 +313,102 @@ public class AppTest extends Assert {
     	assertEquals("master", core.getCurrentBranchName());
     	assertTrue(Files.exists(Paths.get("testdir/dir1/file_d1.txt")));
     	assertTrue(Files.exists(Paths.get("testdir/file.txt")));
+    }
+    
+    @Test
+    public void testMergeConflict() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
+    	GitCli.main(new String[] {"init"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	
+    	GitCli.main(new String[] {"commit", "message 2"});
+    	assertTrue(Files.exists(Paths.get(".myGitDataStorage/testdir/file.txtr0")));
+    	assertFalse(Files.exists(Paths.get(".myGitDataStorage/testdir/file.txtr1")));
+    	
+    	GitCli.main(new String[] {"checkout", "1"});
+    	GitCli.main(new String[] {"branch", "b1"});
+    	GitCli.main(new String[] {"checkout", "b1"});
+    	
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message b1"});
+    	
+    	GitCli.main(new String[] {"checkout", "master"});
+    	
+    	GitCore core = new GitCore();
+    	
+    	core.makeMerge("b1", new BiFunction<Path, Path, Path>() {
+			
+			@Override
+			public Path apply(Path t, Path u) {
+				assertEquals(".myGitDataStorage/testdir/file.txtr0", t.toString());
+				assertEquals(".myGitDataStorage/testdir/file.txtr2", u.toString());
+				return t;
+			}
+		});
+    	
+    }
+    
+    @Test
+    public void testLog() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
+    	GitCli.main(new String[] {"init"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCore core = new GitCore();
+    	assertEquals("Empty log", core.getLog(-1));
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	
+    	assertNotEquals("Empty log", core.getLog(-1));
+    	assertEquals(core.getLog(-1), core.getLog(0));
+    }
+    
+    @Test(expected = BranchProblemException.class)
+    public void testIncorrectBigCheckoutRevision() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
+    	GitCli.main(new String[] {"init"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	
+    	GitCore core = new GitCore();
+    	try {
+    		core.makeCheckout(2);
+    	} catch (BranchProblemException bpe) {
+    		assertEquals("revision number" + 3 + " is incorrect", bpe.message);
+    		throw bpe;
+    	}
+    }
+    
+    @Test
+    public void testDetachedState() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
+    	GitCli.main(new String[] {"init"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 2"});
+    	
+    	GitCore core = new GitCore();
+    	try {
+    		core.makeCheckout(0);
+    		assertTrue(false);
+    	} catch (BranchProblemException bpe) {
+    		assertEquals("Now you're in detached state at revision 1", bpe.message);
+    	}
+    	
+    	try {
+    		core.makeCommit("abc");
+    		assertTrue(false);
+    	} catch (BranchProblemException bpe) {
+    		assertEquals("Staying not at end of some branch", bpe.message);
+    	}
+    }
+    
+    @Test
+    public void testEmptyCommitNotFails() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
+    	GitCli.main(new String[] {"init"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	
+    	GitCli.main(new String[] {"commit", "message 2"});
+    	
+    	GitCore core = new GitCore();
+    	core.getLog(-1);
     }
 }

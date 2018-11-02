@@ -83,7 +83,7 @@ public class GitCore {
 		.resolve(keyPath.getFileName().toString() + "r" + revision);
 	}
 	
-	private void addFile(Path filepath) throws IOException {
+	private void addFileDuringCommit(Path filepath) throws IOException {
 		int revision = inform.revision;
 		Path keyPath = filepath.subpath(1, filepath.getNameCount());
 		Path storage = getStoragePath(keyPath, revision);
@@ -93,15 +93,6 @@ public class GitCore {
 		if (!inform.fileNumber.containsKey(keyName)) {
 			System.out.println(keyName);
 			inform.fileNumber.put(keyName, inform.nFiles++);
-		}
-		
-		if (inform.nCommits <= revision) {
-			inform.nCommits++;
-			inform.commitedFiles.add(new TreeSet<>());
-			inform.removedFiles.add(new TreeSet<>());
-			inform.prevCommit.add(inform.branchEnds.get(inform.currentBranchNumber));
-			inform.branchEnds.put(inform.currentBranchNumber, revision);
-			inform.numberOfStartedBranchesAtRevision.add(0);
 		}
 
 		Set<Integer> currentRevisionFiles = inform.commitedFiles.get(revision);
@@ -121,42 +112,51 @@ public class GitCore {
 	
 	void makeCommit(String message) throws IOException, UnversionedException, BranchProblemException {
 		findRepInformation();
-		if (inform.revision != inform.currentBranchLastRevision()) {
+		if (inform.currentBranchNumber == -1 ||
+				inform.revision != inform.currentBranchLastRevision()) {
 			throw new BranchProblemException("Staying not at end of some branch");
 		}
 
 		inform.revision = inform.nCommits;
 		inform.commitMessages.add(message);
 		inform.timestamps.add(new Timestamp(System.currentTimeMillis()));
+		
+		{
+			inform.nCommits++;
+			inform.commitedFiles.add(new TreeSet<>());
+			inform.removedFiles.add(new TreeSet<>());
+			inform.prevCommit.add(inform.branchEnds.get(inform.currentBranchNumber));
+			inform.branchEnds.put(inform.currentBranchNumber, inform.revision);
+			inform.numberOfStartedBranchesAtRevision.add(0);
+		}
+		
 		Files.walkFileTree(
 				informPath.resolve(stageFolder),
 				new FileVisitor<Path>() {
 
 			@Override
 			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-				// TODO Auto-generated method stub
 				return FileVisitResult.CONTINUE;
 			}
 
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-				addFile(file);
+				addFileDuringCommit(file);
 				Files.delete(file);
 				return FileVisitResult.CONTINUE;
 			}
 
 			@Override
 			public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-				// TODO Auto-generated method stub
 				return FileVisitResult.CONTINUE;
 			}
 
 			@Override
 			public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-				// TODO Auto-generated method stub
 				return FileVisitResult.CONTINUE;
 			}
 		});
+		
 		updateRepInformation();
 	}
 	
@@ -199,16 +199,19 @@ public class GitCore {
 	}
 	
 	private void restoreFile(Integer fileNumber, Integer revision) throws IOException {
-		String keyName = RepInformation.getStringByNumber(fileNumber, inform.fileNumber);
+		String keyName = RepInformation.getKeyByValue(fileNumber, inform.fileNumber);
 		FileUtils.copyFile(
 				informPath.resolve(getStoragePath(Paths.get(keyName), revision)).toFile(),
 				informPath.resolve(keyName).toFile()
 		);
 	}
 
-	void makeCheckout(int revision) throws IOException, UnversionedException {
+	void makeCheckout(int revision) throws IOException, UnversionedException, BranchProblemException {
 		//revision--;
 		findRepInformation();
+		if (revision >= inform.nCommits || revision < 0) {
+			throw new BranchProblemException("revision number" + (revision + 1) + " is incorrect");
+		}
 		deleteVersionedFiles(informPath.toAbsolutePath().toFile());
 
 		Map<Integer, Integer> filesToRestore = new TreeMap<>();
@@ -218,9 +221,20 @@ public class GitCore {
 			restoreFile(fileEntry.getKey(), fileEntry.getValue());
 		}
 		
+		
 		inform.revision = revision;
-		inform.currentBranchNumber = -1;
+		Integer branchNumber = RepInformation.getKeyByValue(revision, inform.branchEnds);
+		if (branchNumber != null) {
+			inform.currentBranchNumber = branchNumber;
+		} else {
+			inform.currentBranchNumber = -1;
+		}
+		
 		updateRepInformation();
+
+		if (branchNumber == null) {
+			throw new BranchProblemException("Now you're in detached state at revision " + (revision + 1));
+		}
 	}
 	
 	void makeCheckout(String branchName) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
@@ -262,25 +276,38 @@ public class GitCore {
 		}
 	}
 	
-	void makeReset(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException {
+	void makeReset(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
 		makeCheckout(revision);
 		FileUtils.cleanDirectory(informPath.resolve(stageFolder).toFile());
 	}
 	
-	String getLog(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException {
-		//revision--;
+	String getLog(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
 		findRepInformation();
+		
+		if (revision < -1 || revision >= inform.nCommits) {
+			throw new BranchProblemException("revision number " + (revision + 1) + " is incorrect");
+		}
+		
 		if (revision == -1) {
 			revision = inform.revision;
 		}
-		if(revision == 0) {
+
+		if(revision == -1) {
 			return "Empty log";
 		}
-		return 
+
+		StringBuilder sb = new StringBuilder();
+		while (revision >= 0) {
+			sb.append(
 				"branch " + inform.getCurrentBranchName()
-				+"revision: " + revision + "\n"
-				+ inform.commitMessages.get(revision - 1) + "\n"
-				+ inform.timestamps.get(revision - 1);
+				+"\nrevision: " + (revision + 1) + "\n"
+				+ inform.commitMessages.get(revision) + "\n"
+				+ inform.timestamps.get(revision) + "\n\n"
+				);
+			revision = inform.prevCommit.get(revision);
+		}
+
+		return sb.toString();
 	}
 	
 	List<String> getDeletedFiles() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
@@ -321,14 +348,12 @@ public class GitCore {
 
 			@Override
 			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-				// TODO Auto-generated method stub
 				return dir.equals(Paths.get(stageFolder)) || dir.equals(Paths.get(storageFolder))
 						? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
 			}
 
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-				// TODO Auto-generated method stub
 				if (!inform.fileNumber.containsKey(informPath.relativize(file).toString())) {
 					result.add(file.toString());
 				}
@@ -337,13 +362,11 @@ public class GitCore {
 
 			@Override
 			public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-				// TODO Auto-generated method stub
 				return FileVisitResult.CONTINUE;
 			}
 
 			@Override
 			public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-				// TODO Auto-generated method stub
 				return FileVisitResult.CONTINUE;
 			}
 		});
@@ -369,7 +392,6 @@ public class GitCore {
 		inform.removedFiles.get(revision).add(fileNumber);
 		
 		Files.deleteIfExists(informPath.resolve(stageFolder).resolve(keypath));
-		//inform.fileNumber.remove(keypath.toString());
 	}
 	
 	void makeRM(String[] files) throws IOException, UnversionedException {
@@ -414,11 +436,11 @@ public class GitCore {
 			for (Integer fileNumber : inform.commitedFiles.get(revision)) {
 				Files.deleteIfExists(
 						getStoragePath(
-								Paths.get(RepInformation.getStringByNumber(fileNumber, inform.fileNumber)), revision)
+								Paths.get(RepInformation.getKeyByValue(fileNumber, inform.fileNumber)), revision)
 						);
 				Files.deleteIfExists(
 						informPath.resolve(
-								RepInformation.getStringByNumber(fileNumber, inform.fileNumber)));
+								RepInformation.getKeyByValue(fileNumber, inform.fileNumber)));
 			}
 			inform.commitedFiles.get(revision).clear();
 			revision = inform.prevCommit.get(revision);
@@ -454,19 +476,20 @@ public class GitCore {
 		collectVersionedFiles(otherRev, filesToRestoreOther);
 		
 		for (Entry<Integer, Integer> fileEntry : filesToRestoreCurrent.entrySet()) {
-			if (!filesToRestoreOther.containsKey(fileEntry.getKey())
+			Integer otherEntRevision = filesToRestoreOther.get(fileEntry.getKey());
+			if (otherEntRevision == null
 					|| fileEntry.getValue()
-						.equals(filesToRestoreOther.get(fileEntry.getKey()))) {
+						.equals(otherEntRevision)) {
 				restoreFile(fileEntry.getKey(), fileEntry.getValue());
 			} else {
-				Path keyPath = Paths.get(RepInformation.getStringByNumber(fileEntry.getValue(), inform.fileNumber));
+				Path keyPath = Paths.get(RepInformation.getKeyByValue(fileEntry.getValue(), inform.fileNumber));
 				boolean choosenSuccessfully = false;
 				while (!choosenSuccessfully) {
 					try {
 						FileUtils.copyFile(
 								fileChooser.apply(
-										getStoragePath(keyPath, currRev),
-										getStoragePath(keyPath, otherRev)).toFile(),
+										getStoragePath(keyPath, fileEntry.getValue()),
+										getStoragePath(keyPath, otherEntRevision)).toFile(),
 								informPath.resolve(keyPath).toFile());
 						choosenSuccessfully = true;
 					} catch (FileNotFoundException e) {
