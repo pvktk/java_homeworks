@@ -79,7 +79,7 @@ public class GitCore {
 	
 	private Path getStoragePath(Path keyPath, int revision) {
 		return informPath.resolve(storageFolder)
-		.resolve(keyPath.getParent())
+		.resolve(keyPath.getParent() == null ? Paths.get("") : keyPath.getParent())
 		.resolve(keyPath.getFileName().toString() + "r" + revision);
 	}
 	

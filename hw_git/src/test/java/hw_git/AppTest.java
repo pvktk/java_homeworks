@@ -28,12 +28,14 @@ public class AppTest extends Assert {
 	
 	final String storageFilename = ".myGitDataFile";
 	final String storageFolder = ".myGitDataStorage";
+	final String stageFolder = ".stageData";
 	@Before
 	public void setUp() throws IOException {
 		//System.out.println("setUp");
 		Files.createDirectories(Paths.get("testdir/dir1"));
     	Files.createFile(Paths.get("testdir/dir1/file_d1.txt"));
     	Files.createFile(Paths.get("testdir/file.txt"));
+    	Files.createFile(Paths.get("one.txt"));
 	}
 	
 	@After
@@ -41,8 +43,12 @@ public class AppTest extends Assert {
 		//System.out.println("tearDown");
 		FileUtils.deleteDirectory(Paths.get("testdir").toFile());
 		FileUtils.deleteDirectory(Paths.get(storageFolder).toFile());
+		FileUtils.deleteDirectory(Paths.get(stageFolder).toFile());
 		if (Files.exists(Paths.get(storageFilename))) {
 			Files.delete(Paths.get(storageFilename));
+		}
+		if (Files.exists(Paths.get("one.txt"))) {
+			Files.delete(Paths.get("one.txt"));
 		}
 	}
 	
@@ -411,4 +417,15 @@ public class AppTest extends Assert {
     	GitCore core = new GitCore();
     	core.getLog(-1);
     }
+    
+    @Test
+    public void testCommitFileInRoot() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
+    	GitCli.main(new String[] {"init"});
+    	GitCli.main(new String[] {"add", "one.txt"});
+    	GitCli.main(new String[] {"commit", "message 2"});
+    	
+    	GitCore core = new GitCore();
+    	core.getLog(-1);
+    }
+    
 }
