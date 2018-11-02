@@ -104,6 +104,10 @@ public class GitCli {
 			case "status":
 				core.findRepInformation();
 				System.out.println("Status:");
+				System.out.println("Staged files:\n________________");
+				for (String fname : core.getStagedFiles()) {
+					System.out.println(fname);
+				}
 				System.out.println("Deleted files:\n________________");
 				for (String fname : core.getDeletedFiles()) {
 					System.out.println(fname);

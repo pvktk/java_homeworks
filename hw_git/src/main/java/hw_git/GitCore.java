@@ -342,6 +342,35 @@ public class GitCore {
 		return result;
 	}
 	
+	List<String> getStagedFiles() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
+		ArrayList<String> result = new ArrayList<>();
+		Files.walkFileTree(informPath.resolve(stageFolder), new FileVisitor<Path>() {
+
+			@Override
+			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				result.add(file.toString());
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+				return FileVisitResult.CONTINUE;
+			}
+		});
+
+		return result;
+	}
+	
 	List<String> getUntrackedFiles() throws IOException {
 		ArrayList<String> result = new ArrayList<>();
 		Files.walkFileTree(Paths.get(""), new FileVisitor<Path>() {
