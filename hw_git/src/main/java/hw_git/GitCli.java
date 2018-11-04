@@ -91,7 +91,7 @@ public class GitCli {
 			case "reset":
 				revision = Integer.parseInt(args[1]);
 				System.out.println("Performing reset to revision " + revision);
-				core.makeReset(revision);
+				core.makeReset(revision - 1);
 				break;
 			case "log":
 				revision = args.length == 2 ? Integer.parseInt(args[1]) : 0;
@@ -102,24 +102,7 @@ public class GitCli {
 				core.makeRM(Arrays.copyOfRange(args, 1, args.length));
 				break;
 			case "status":
-				core.findRepInformation();
-				System.out.println("Status:");
-				System.out.println("Staged files:\n________________");
-				for (String fname : core.getStagedFiles()) {
-					System.out.println(fname);
-				}
-				System.out.println("Deleted files:\n________________");
-				for (String fname : core.getDeletedFiles()) {
-					System.out.println(fname);
-				}
-				System.out.println("Changed files:\n________________");
-				for (String fname : core.getChangedFiles()) {
-					System.out.println(fname);
-				}
-				System.out.println("Untracked files:\n________________");
-				for (String fname : core.getUntrackedFiles()) {
-					System.out.println(fname);
-				}
+				System.out.println(core.getStatus());
 				break;
 			case "branch":
 				if (args[1].equals("-d")) {

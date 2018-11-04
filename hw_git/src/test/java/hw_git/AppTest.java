@@ -65,7 +65,6 @@ public class AppTest extends Assert {
     public void testUnversioned() throws IOException, UnversionedException {
     	GitCore core = new GitCore();
     	core.findRepInformation();
-    	//core.makeCheckout(0);
     }
     
     @Test
@@ -109,26 +108,24 @@ public class AppTest extends Assert {
     	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
     		out.print("commit 1 content");
     	}
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", "testdir/file.txt", "testdir/dir1/file_d1.txt"});
     	GitCli.main(new String[] {"commit", "message 1"});
-    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
-    	GitCli.main(new String[] {"commit", "message 2"});
     	
     	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
-    		out.print("commit 3 content");
+    		out.print("commit 2 content");
     	}
     	
     	GitCli.main(new String[] {"add", "testdir/file.txt"});
-    	GitCli.main(new String[] {"commit", "message 3"});
+    	GitCli.main(new String[] {"commit", "message 2"});
     	
-    	GitCli.main(new String[] {"checkout", "2"});
+    	GitCli.main(new String[] {"checkout", "1"});
     	try (Scanner in = new Scanner(new File("testdir/file.txt"))) {
     		assertEquals(in.nextLine(), "commit 1 content");
     	}
     	
-    	GitCli.main(new String[] {"checkout", "3"});
+    	GitCli.main(new String[] {"checkout", "2"});
     	try (Scanner in = new Scanner(new File("testdir/file.txt"))) {
-    		assertEquals(in.nextLine(), "commit 3 content");
+    		assertEquals(in.nextLine(), "commit 2 content");
     	}
     }
     
@@ -251,20 +248,15 @@ public class AppTest extends Assert {
     	}
     }
     
-    @Test(expected = BranchProblemException.class)
     public void testIncorrectBranchRm() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
-    	GitCli.main(new String[] {"commit", "message 1"});
-    	
-    	GitCli.main(new String[] {"branch", "b1"});
-    	GitCli.main(new String[] {"checkout", "b1"});
-    	
-    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
-    	GitCli.main(new String[] {"commit", "message 2"});
-    	
     	GitCore core = new GitCore();
-    	core.makeDeleteBranch("master");
+    	try {
+    		core.makeDeleteBranch("master");
+    		assert false;
+    	} catch (BranchProblemException bpe) {
+    		assertEquals("You can't delete this branch while staying on it.", bpe.message);
+    	}
     }
     
     @Test
@@ -279,14 +271,14 @@ public class AppTest extends Assert {
     	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
     	GitCli.main(new String[] {"commit", "message 2"});
     	
+    	GitCli.main(new String[] {"checkout", "master"});
     	GitCli.main(new String[] {"branch", "-d", "b1"});
-    	
+
     	GitCore core = new GitCore();
-    	assertNull(core.getCurrentBranchName());
     	
-    	assertFalse(Files.exists(Paths.get("testdir/dir1/file_d1.txt")));
-    	assertTrue(Files.exists(Paths.get("testdir/file.txt")));
-    	
+    	try {
+    		core.makeCheckout(0);
+    	} catch (BranchProblemException e) {}
     	core.makeBranch("b1");
     	core.makeCheckout("b1");
     	assertFalse(Files.exists(Paths.get("testdir/dir1/file_d1.txt")));
@@ -355,14 +347,14 @@ public class AppTest extends Assert {
     }
     
     @Test
-    public void testLog() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
+    public void testLogBasic() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
     	GitCli.main(new String[] {"add", "testdir/file.txt"});
     	GitCore core = new GitCore();
-    	assertEquals("Empty log", core.getLog(-1));
+    	assertEquals("Empty log", core.getLog(-1).get(0));
     	GitCli.main(new String[] {"commit", "message 1"});
     	
-    	assertNotEquals("Empty log", core.getLog(-1));
+    	assertEquals("\nrevision: 1\nmessage 1", core.getLog(-1).get(0));
     	assertEquals(core.getLog(-1), core.getLog(0));
     }
     
@@ -395,7 +387,7 @@ public class AppTest extends Assert {
     		core.makeCheckout(0);
     		assertTrue(false);
     	} catch (BranchProblemException bpe) {
-    		assertEquals("Now you're in detached state at revision 1", bpe.message);
+    		assertEquals("HEAD detached on revison 1", bpe.message);
     	}
     	
     	try {

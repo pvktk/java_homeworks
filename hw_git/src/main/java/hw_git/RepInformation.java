@@ -11,9 +11,11 @@ public class RepInformation {
 	
 	int revision = -1;
 	int currentBranchNumber = 0;
+	int detachedHeadRevision;
+	
 	int nCommits = 0;
 	int nFiles = 0;
-	int lastBranchNumber = 0;
+	int nBranches = 1;
 
 	ArrayList<String> commitMessages = new ArrayList<>();
 
@@ -154,12 +156,12 @@ public class RepInformation {
 		this.nFiles = nFiles;
 	}
 	
-	public int getLastBranchNumber() {
-		return lastBranchNumber;
+	public int getnBranches() {
+		return nBranches;
 	}
 
-	public void setLastBranchNumber(int lastBranchNumber) {
-		this.lastBranchNumber = lastBranchNumber;
+	public void setnBranches(int lastBranchNumber) {
+		this.nBranches = lastBranchNumber;
 	}
 	
 	public ArrayList<Integer> getNumberOfStartedBranchesAtRevision() {
@@ -169,4 +171,13 @@ public class RepInformation {
 	public void setNumberOfStartedBranchesAtRevision(ArrayList<Integer> numberOfStartedBrancesAtRevision) {
 		this.numberOfStartedBranchesAtRevision = numberOfStartedBrancesAtRevision;
 	}
+
+	public int getDetachedHeadRevision() {
+		return detachedHeadRevision;
+	}
+
+	public void setDetachedHeadRevision(int detachedHeadRevision) {
+		this.detachedHeadRevision = detachedHeadRevision;
+	}
+	
 }

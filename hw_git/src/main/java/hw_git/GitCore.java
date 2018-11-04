@@ -79,8 +79,7 @@ public class GitCore {
 	
 	private Path getStoragePath(Path keyPath, int revision) {
 		return informPath.resolve(storageFolder)
-		.resolve(keyPath.getParent() == null ? Paths.get("") : keyPath.getParent())
-		.resolve(keyPath.getFileName().toString() + "r" + revision);
+		.resolve(keyPath.toString() + "r" + revision);
 	}
 	
 	private void addFileDuringCommit(Path filepath) throws IOException {
@@ -112,8 +111,7 @@ public class GitCore {
 	
 	void makeCommit(String message) throws IOException, UnversionedException, BranchProblemException {
 		findRepInformation();
-		if (inform.currentBranchNumber == -1 ||
-				inform.revision != inform.currentBranchLastRevision()) {
+		if (inform.currentBranchNumber == -1) {
 			throw new BranchProblemException("Staying not at end of some branch");
 		}
 
@@ -207,11 +205,11 @@ public class GitCore {
 	}
 
 	void makeCheckout(int revision) throws IOException, UnversionedException, BranchProblemException {
-		//revision--;
 		findRepInformation();
 		if (revision >= inform.nCommits || revision < 0) {
 			throw new BranchProblemException("revision number" + (revision + 1) + " is incorrect");
 		}
+
 		deleteVersionedFiles(informPath.toAbsolutePath().toFile());
 
 		Map<Integer, Integer> filesToRestore = new TreeMap<>();
@@ -221,20 +219,13 @@ public class GitCore {
 			restoreFile(fileEntry.getKey(), fileEntry.getValue());
 		}
 		
-		
 		inform.revision = revision;
-		Integer branchNumber = RepInformation.getKeyByValue(revision, inform.branchEnds);
-		if (branchNumber != null) {
-			inform.currentBranchNumber = branchNumber;
-		} else {
-			inform.currentBranchNumber = -1;
-		}
+		inform.detachedHeadRevision = revision;
+		inform.currentBranchNumber = -1;
 		
 		updateRepInformation();
-
-		if (branchNumber == null) {
-			throw new BranchProblemException("Now you're in detached state at revision " + (revision + 1));
-		}
+		
+		throw new BranchProblemException("HEAD detached on revison " + (revision + 1));
 	}
 	
 	void makeCheckout(String branchName) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
@@ -246,7 +237,10 @@ public class GitCore {
 
 		int branchRevision = inform.branchEnds.get(branchNumber);
 		
-		makeCheckout(branchRevision);
+		try {
+			makeCheckout(branchRevision);
+		} catch (BranchProblemException e) {}
+		
 		inform.currentBranchNumber = branchNumber;
 		updateRepInformation();
 	}
@@ -277,12 +271,22 @@ public class GitCore {
 	}
 	
 	void makeReset(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
+		findRepInformation();
+	
+		inform.revision = revision;
+		if (inform.currentBranchNumber != -1) {
+			inform.branchEnds.put(inform.currentBranchNumber, revision);
+		}
+
 		makeCheckout(revision);
-		FileUtils.cleanDirectory(informPath.resolve(stageFolder).toFile());
+		
+		updateRepInformation();
 	}
 	
-	String getLog(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
+	ArrayList<String> getLog(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
 		findRepInformation();
+		
+		ArrayList<String> result = new ArrayList<>();
 		
 		if (revision < -1 || revision >= inform.nCommits) {
 			throw new BranchProblemException("revision number " + (revision + 1) + " is incorrect");
@@ -293,21 +297,21 @@ public class GitCore {
 		}
 
 		if(revision == -1) {
-			return "Empty log";
+			result.add("Empty log");
+			return result;
 		}
 
-		StringBuilder sb = new StringBuilder();
 		while (revision >= 0) {
-			sb.append(
-				"branch " + inform.getCurrentBranchName()
-				+"\nrevision: " + (revision + 1) + "\n"
-				+ inform.commitMessages.get(revision) + "\n"
-				+ inform.timestamps.get(revision) + "\n\n"
+			result.add(
+				"\nrevision: " + (revision + 1) + "\n"
+				+ inform.commitMessages.get(revision)
 				);
+			result.add(inform.timestamps.get(revision) + "\n");
+
 			revision = inform.prevCommit.get(revision);
 		}
 
-		return sb.toString();
+		return result;
 	}
 	
 	List<String> getDeletedFiles() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
@@ -437,7 +441,7 @@ public class GitCore {
 			throw new BranchProblemException("Branch already exists: " + branchName);
 		}
 		
-		Integer newBranchNumber = ++inform.lastBranchNumber;
+		Integer newBranchNumber = inform.nBranches++;
 		inform.branchNumbers.put(branchName, newBranchNumber);
 		inform.branchEnds.put(newBranchNumber, inform.revision);
 		addAtIdx(inform.numberOfStartedBranchesAtRevision, inform.revision, 1);
@@ -445,41 +449,23 @@ public class GitCore {
 	}
 	
 	void makeDeleteBranch(String branchName) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
-		makeCheckout(branchName);
+		//makeCheckout(branchName);
+		
 		findRepInformation();
 		Integer branchNumber = inform.branchNumbers.get(branchName);
+
 		if (branchNumber == null) {
 			throw new BranchProblemException("No such branch: " + branchName);
 		}
-		
-		Integer revision = inform.branchEnds.get(branchNumber);
-		if (inform.numberOfStartedBranchesAtRevision.get(revision) > 0) {
-			throw new BranchProblemException("There is no free end of branch " + branchName);
+
+		if (branchNumber.equals(inform.currentBranchNumber)) {
+			throw new BranchProblemException("You can't delete this branch while staying on it.");
 		}
 
 		inform.branchEnds.remove(branchNumber);
 		
 		inform.branchNumbers.remove(branchName);
 		
-		while (revision >= 0 && inform.numberOfStartedBranchesAtRevision.get(revision) == 0) {
-			for (Integer fileNumber : inform.commitedFiles.get(revision)) {
-				Files.deleteIfExists(
-						getStoragePath(
-								Paths.get(RepInformation.getKeyByValue(fileNumber, inform.fileNumber)), revision)
-						);
-				Files.deleteIfExists(
-						informPath.resolve(
-								RepInformation.getKeyByValue(fileNumber, inform.fileNumber)));
-			}
-			inform.commitedFiles.get(revision).clear();
-			revision = inform.prevCommit.get(revision);
-		}
-		
-		if (revision >= 0) {
-			addAtIdx(inform.numberOfStartedBranchesAtRevision, revision, -1);
-		}
-
-		inform.currentBranchNumber = -1;
 		updateRepInformation();
 	}
 	
@@ -540,5 +526,35 @@ public class GitCore {
 	String getCurrentBranchName() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
 		findRepInformation();
 		return inform.getCurrentBranchName();
+	}
+
+	public ArrayList<String> getStatus() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
+		ArrayList<String> result = new ArrayList<>();
+		
+		findRepInformation();
+		result.add("Status:");
+		if (inform.currentBranchNumber != -1) {
+			result.add("branch " + inform.getCurrentBranchName());
+		} else {
+			result.add("detached head at " + inform.detachedHeadRevision);
+		}
+		
+		result.add("Staged files:\n________________");
+		for (String fname : getStagedFiles()) {
+			result.add(fname);
+		}
+		result.add("Deleted files:\n________________");
+		for (String fname : getDeletedFiles()) {
+			result.add(fname);
+		}
+		result.add("Changed files:\n________________");
+		for (String fname : getChangedFiles()) {
+			result.add(fname);
+		}
+		result.add("Untracked files:\n________________");
+		for (String fname : getUntrackedFiles()) {
+			result.add(fname);
+		}
+		return null;
 	}
 }
