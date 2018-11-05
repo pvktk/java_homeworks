@@ -65,7 +65,6 @@ public class GitCore {
 			informPath = Paths.get("");
 			inform = new RepInformation();
 			updateRepInformation();
-			System.out.println("Repository initiated.");
 		}
 	}
 	
@@ -82,9 +81,13 @@ public class GitCore {
 		.resolve(keyPath.toString() + "r" + revision);
 	}
 	
+	private Path cutRoot(Path p) {
+		return p.subpath(1, p.getNameCount());
+	}
+
 	private void addFileDuringCommit(Path filepath) throws IOException {
 		int revision = inform.revision;
-		Path keyPath = filepath.subpath(1, filepath.getNameCount());
+		Path keyPath = cutRoot(filepath);
 		Path storage = getStoragePath(keyPath, revision);
 		storage.getParent().toFile().mkdirs();
 		Files.copy(filepath, storage);
@@ -224,8 +227,6 @@ public class GitCore {
 		inform.currentBranchNumber = -1;
 		
 		updateRepInformation();
-		
-		throw new BranchProblemException("HEAD detached on revison " + (revision + 1));
 	}
 	
 	void makeCheckout(String branchName) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
@@ -246,8 +247,9 @@ public class GitCore {
 	}
 	
 	private int getLastRevisionOfFile(String keyName) {
-		int revision = inform.currentBranchLastRevision();
-		while (revision >= 0 && !inform.commitedFiles.get(revision).contains(inform.fileNumber.get(keyName))) {
+		int revision = inform.revision;
+		while (revision >= 0 && !inform.commitedFiles.get(revision)
+				.contains(inform.fileNumber.get(keyName))) {
 			revision = inform.prevCommit.get(revision);
 		}
 		return revision;
@@ -272,13 +274,22 @@ public class GitCore {
 	
 	void makeReset(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
 		findRepInformation();
-	
+		/*
 		inform.revision = revision;
 		if (inform.currentBranchNumber != -1) {
 			inform.branchEnds.put(inform.currentBranchNumber, revision);
 		}
-
+		
+		*/
+		int currBranchT = inform.currentBranchNumber;
+		int currDetachedPosT = inform.detachedHeadRevision;
 		makeCheckout(revision);
+		
+		if (currBranchT != -1) {
+			inform.currentBranchNumber = currBranchT;
+			inform.branchEnds.put(currBranchT, revision);
+		}
+		inform.detachedHeadRevision = currDetachedPosT;
 		
 		updateRepInformation();
 	}
@@ -336,7 +347,8 @@ public class GitCore {
 			if (Files.exists(informPath.resolve(keyName))
 					&& !FileUtils.contentEquals(
 							informPath.resolve(keyName).toFile(),
-							getStoragePath(Paths.get(keyName), getLastRevisionOfFile(keyName)
+							getStoragePath(Paths.get(keyName),
+									getLastRevisionOfFile(keyName)
 									).toFile()
 							)) {
 				result.add(Paths.get("").relativize(Paths.get(keyName)).toString());
@@ -357,7 +369,7 @@ public class GitCore {
 
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-				result.add(file.toString());
+				result.add(cutRoot(file).toString());
 				return FileVisitResult.CONTINUE;
 			}
 
@@ -449,7 +461,6 @@ public class GitCore {
 	}
 	
 	void makeDeleteBranch(String branchName) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
-		//makeCheckout(branchName);
 		
 		findRepInformation();
 		Integer branchNumber = inform.branchNumbers.get(branchName);
@@ -536,25 +547,21 @@ public class GitCore {
 		if (inform.currentBranchNumber != -1) {
 			result.add("branch " + inform.getCurrentBranchName());
 		} else {
-			result.add("detached head at " + inform.detachedHeadRevision);
+			result.add("detached head at revision " + (inform.detachedHeadRevision + 1));
 		}
 		
 		result.add("Staged files:\n________________");
-		for (String fname : getStagedFiles()) {
-			result.add(fname);
-		}
+		result.addAll(getStagedFiles());
+		
 		result.add("Deleted files:\n________________");
-		for (String fname : getDeletedFiles()) {
-			result.add(fname);
-		}
+		result.addAll(getDeletedFiles());
+		
 		result.add("Changed files:\n________________");
-		for (String fname : getChangedFiles()) {
-			result.add(fname);
-		}
+		result.addAll(getChangedFiles());
+		
 		result.add("Untracked files:\n________________");
-		for (String fname : getUntrackedFiles()) {
-			result.add(fname);
-		}
-		return null;
+		result.addAll(getUntrackedFiles());
+		
+		return result;
 	}
 }

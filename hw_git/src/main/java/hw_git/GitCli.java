@@ -5,8 +5,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -54,7 +56,19 @@ public class GitCli {
 		}
 	}
 
-	public static void main(String[] args) throws JsonGenerationException, JsonMappingException{
+	public static void main(String[] args) throws JsonGenerationException, JsonMappingException {
+		System.out.println(
+				processArgs(args)
+				.stream()
+				.collect(
+						Collectors.joining("\n")
+						)
+				);
+	}
+	
+	public static ArrayList<String> processArgs(String[] args) throws JsonGenerationException, JsonMappingException{
+		
+		ArrayList<String> res = new ArrayList<>();
 		
 		GitCore core = new GitCore();
 		int revision;
@@ -63,73 +77,78 @@ public class GitCli {
 		switch (args[0]) {
 			case "init":
 				core.makeInit();
+				res.add("Repository initiated.");
 				break;
 			case "add":
-				System.out.println("Addition...");
+				res.add("Addition...");
 				core.makeAdd(Arrays.copyOfRange(args, 1, args.length));
 				break;
 			case "commit":
-				System.out.println("Commiting...");
+				res.add("Commiting...");
 				core.makeCommit(args[1]);
-				System.out.println("Commit made at revision " + (core.getCurrentRevision() + 1));
+				res.add("Commit made at revision " + (core.getCurrentRevision() + 1));
 				break;
 			case "checkout":
 				if (args[1].equals("--")) {
-					System.out.println("Checking out files...");
+					res.add("Checking out files...");
 					core.makeCheckout(Arrays.copyOfRange(args, 2, args.length));
 				} else {
 					try {
 						revision = Integer.parseInt(args[1]);
-						System.out.println("Check out to revision " + revision);
+						res.add("Checkout to revision " + revision);
 						core.makeCheckout(revision - 1);
+						res.add("HEAD detached on revison " + revision);
 					} catch (NumberFormatException e) {
-						System.out.println("Checking out branch...");
+						res.add("Checking out branch...");
 						core.makeCheckout(args[1]);
 					}
 				}
 				break;
 			case "reset":
 				revision = Integer.parseInt(args[1]);
-				System.out.println("Performing reset to revision " + revision);
+				res.add("Performing reset to revision " + revision);
 				core.makeReset(revision - 1);
 				break;
 			case "log":
 				revision = args.length == 2 ? Integer.parseInt(args[1]) : 0;
-				System.out.println("Log: " + core.getLog(revision - 1));
+				res.add("Log:");
+				res.addAll(core.getLog(revision - 1));
 				break;
 			case "rm":
-				System.out.println("Removing...");
+				res.add("Removing...");
 				core.makeRM(Arrays.copyOfRange(args, 1, args.length));
 				break;
 			case "status":
-				System.out.println(core.getStatus());
+				res.addAll(core.getStatus());
 				break;
 			case "branch":
 				if (args[1].equals("-d")) {
-					System.out.println("Deleting branch " + args[2]);
+					res.add("Deleting branch " + args[2]);
 					core.makeDeleteBranch(args[2]);
 				} else {
-					System.out.println("Making branch " + args[1]);
+					res.add("Making branch " + args[1]);
 					core.makeBranch(args[1]);
 				}
 				break;
 			case "merge":
-				System.out.println("Merging branch " + args[1] + " to " + core.getCurrentBranchName());
+				res.add("Merging branch " + args[1] + " to " + core.getCurrentBranchName());
 				core.makeMerge(args[1], GitCli::conflictFileChooser);
 				break;
 			default:
-				System.out.println("Unknown argument: " + args[0]);
+				res.add("Unknown argument: " + args[0]);
 		}
 		} catch (UnversionedException e) {
-			System.out.println("This directory is not versioned");
+			res.add("This directory is not versioned");
 		} catch (BranchProblemException e) {
-			System.out.println(e.message);
+			res.add(e.message);
 		} catch (FileNotFoundException e) {
-			System.out.println(e.getMessage());
+			res.add(e.getMessage());
 		} catch (IOException e) {
-			System.out.println("IOException: " + e.getMessage());
+			res.add("IOException: " + e.getMessage());
 		} catch (ArrayIndexOutOfBoundsException e) {
-			System.out.println("Lack of arguments");
+			res.add("Lack of arguments");
 		}
+		
+		return res;
 	}
 }

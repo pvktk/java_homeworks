@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.function.BiFunction;
@@ -21,20 +22,24 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class AppTest extends Assert {
 	
-	final String storageFilename = ".myGitDataFile";
-	final String storageFolder = ".myGitDataStorage";
-	final String stageFolder = ".stageData";
+	public static final String storageFilename = ".myGitDataFile";
+	public static final String storageFolder = ".myGitDataStorage";
+	public static final String stageFolder = ".stageData";
+	
+	//files
+	final String file1 = "testdir/file.txt";
+	final String file2 = "testdir/dir1/file_d1.txt";
+	
 	@Before
 	public void setUp() throws IOException {
 		//System.out.println("setUp");
 		Files.createDirectories(Paths.get("testdir/dir1"));
-    	Files.createFile(Paths.get("testdir/dir1/file_d1.txt"));
-    	Files.createFile(Paths.get("testdir/file.txt"));
+    	Files.createFile(Paths.get(file2));
+    	Files.createFile(Paths.get(file1));
     	Files.createFile(Paths.get("one.txt"));
 	}
 	
@@ -58,7 +63,6 @@ public class AppTest extends Assert {
     	GitCore core = new GitCore();
     	core.findRepInformation();
     	assertEquals(core.getCurrentRevision(), -1);
-    	//Files.delete(Paths.get(".myGitData"));
     }
     
     @Test(expected = UnversionedException.class)
@@ -70,34 +74,34 @@ public class AppTest extends Assert {
     @Test
     public void testCheckout() throws JsonGenerationException, JsonMappingException, IOException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
-    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"add", file2});
     	GitCli.main(new String[] {"commit", "message 2"});
     	
     	GitCli.main(new String[] {"checkout", "1"});
-    	assertTrue(Files.exists(Paths.get("testdir/file.txt")));
-    	assertFalse(Files.exists(Paths.get("testdir/dir1/file_d1.txt")));
+    	assertTrue(Files.exists(Paths.get(file1)));
+    	assertFalse(Files.exists(Paths.get(file2)));
     	
     	GitCli.main(new String[] {"checkout", "2"});
-    	assertTrue(Files.exists(Paths.get("testdir/file.txt")));
-    	assertTrue(Files.exists(Paths.get("testdir/dir1/file_d1.txt")));
+    	assertTrue(Files.exists(Paths.get(file1)));
+    	assertTrue(Files.exists(Paths.get(file2)));
     }
     
     @Test
     public void testCheckoutFiles() throws JsonGenerationException, JsonMappingException, IOException {
     	GitCli.main(new String[] {"init"});
-    	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
+    	try (PrintWriter out = new PrintWriter(new File(file1))) {
     		out.println("text 1");
     	}
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
-    	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
+    	try (PrintWriter out = new PrintWriter(new File(file1))) {
     		out.println("text 2");
     	}
     	
-    	GitCli.main(new String[] {"checkout", "--", "testdir/file.txt"});
-    	try (Scanner in = new Scanner(new File("testdir/file.txt"))) {
+    	GitCli.main(new String[] {"checkout", "--", file1});
+    	try (Scanner in = new Scanner(new File(file1))) {
     		assertTrue(in.nextLine().equals("text 1"));
     	}
     }
@@ -105,95 +109,76 @@ public class AppTest extends Assert {
     @Test
     public void testFileChangeBetweenCommits() throws JsonGenerationException, JsonMappingException, IOException {
     	GitCli.main(new String[] {"init"});
-    	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
+    	try (PrintWriter out = new PrintWriter(new File(file1))) {
     		out.print("commit 1 content");
     	}
-    	GitCli.main(new String[] {"add", "testdir/file.txt", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"add", file1, file2});
     	GitCli.main(new String[] {"commit", "message 1"});
     	
-    	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
+    	try (PrintWriter out = new PrintWriter(new File(file1))) {
     		out.print("commit 2 content");
     	}
     	
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 2"});
     	
     	GitCli.main(new String[] {"checkout", "1"});
-    	try (Scanner in = new Scanner(new File("testdir/file.txt"))) {
+    	try (Scanner in = new Scanner(new File(file1))) {
     		assertEquals(in.nextLine(), "commit 1 content");
     	}
     	
     	GitCli.main(new String[] {"checkout", "2"});
-    	try (Scanner in = new Scanner(new File("testdir/file.txt"))) {
+    	try (Scanner in = new Scanner(new File(file1))) {
     		assertEquals(in.nextLine(), "commit 2 content");
     	}
-    }
-    
-    @Ignore
-    @Test
-    public void testReset() throws JsonGenerationException, JsonMappingException, IOException {
-    	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
-    	GitCli.main(new String[] {"commit", "message 1"});
-    	String s1;
-    	try (Scanner in = new Scanner(new File(".myGitData"))) {
-    		s1 = in.nextLine();
-    	}
-    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
-    	GitCli.main(new String[] {"commit", "message 2"});
-    	GitCli.main(new String[] {"reset", "1"});
-    	String s2;
-    	try (Scanner in = new Scanner(new File(storageFilename))) {
-    		s2 = in.nextLine();
-    	}
-    	assertEquals(s1, s2);
     }
     
     @Test
     public void testRM() throws JsonGenerationException, JsonMappingException, IOException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 2"});
-    	Files.delete(Paths.get("testdir/file.txt"));
-    	GitCli.main(new String[] {"rm", "testdir/file.txt"});
+    	Files.delete(Paths.get(file1));
+    	GitCli.main(new String[] {"rm", file1});
     	GitCli.main(new String[] {"checkout", "2"});
-    	assertFalse(Files.exists(Paths.get("testdir/file.txt")));
+    	assertFalse(Files.exists(Paths.get(file1)));
     	
     	GitCli.main(new String[] {"checkout", "1"});
-    	assertTrue(Files.exists(Paths.get("testdir/file.txt")));
+    	assertTrue(Files.exists(Paths.get(file1)));
     }
     
     @Test
     public void testStatus() throws JsonGenerationException, JsonMappingException, IOException, UnversionedException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
-    	
+
     	GitCore core = new GitCore();
     	core.findRepInformation();
     	
     	assertEquals(core.getChangedFiles(), Arrays.asList());
-    	//assertEquals(core.getUntrackedFiles(), Arrays.asList("testdir/dir1/file_d1.txt"));
+    	//assertEquals(core.getUntrackedFiles(), Arrays.asList(file2));
     	assertEquals(core.getDeletedFiles(), Arrays.asList());
     	
-    	try (PrintWriter out = new PrintWriter(new File("testdir/file.txt"))) {
+    	try (PrintWriter out = new PrintWriter(new File(file1))) {
     		out.print("commit 3 content");
     	}
     	
-    	assertEquals(core.getChangedFiles(), Arrays.asList("testdir/file.txt"));
+    	assertEquals(core.getChangedFiles(), Arrays.asList(file1));
     	
-    	Files.delete(Paths.get("testdir/file.txt"));
+    	Files.delete(Paths.get(file1));
     	
-    	assertEquals(core.getDeletedFiles(), Arrays.asList("testdir/file.txt"));
+    	assertEquals(core.getDeletedFiles(), Arrays.asList(file1));
+    	
     }
     
     @Test
     public void testAddBranch() throws UnversionedException, JsonParseException, IOException {
     	GitCore core = new GitCore();
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
     	
     	assertEquals("master", core.getCurrentBranchName());
@@ -210,91 +195,85 @@ public class AppTest extends Assert {
     @Test
     public void testFilesInBranches() throws JsonGenerationException, JsonMappingException, FileNotFoundException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
     	
     	GitCli.main(new String[] {"branch", "b1"});
     	GitCli.main(new String[] {"checkout", "b1"});
     	
-    	try(PrintWriter out = new PrintWriter(new File("testdir/dir1/file_d1.txt"))) {
+    	try(PrintWriter out = new PrintWriter(new File(file2))) {
     		out.println("b1 content");
     	}
-    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"add", file2});
     	GitCli.main(new String[] {"commit", "message 2"});
     	
-    	assertTrue(Files.exists(Paths.get("testdir/file.txt")));
-    	assertTrue(Files.exists(Paths.get("testdir/dir1/file_d1.txt")));
+    	assertTrue(Files.exists(Paths.get(file1)));
+    	assertTrue(Files.exists(Paths.get(file2)));
     	
     	GitCli.main(new String[] {"checkout", "master"});
     	
-    	assertFalse(Files.exists(Paths.get("testdir/dir1/file_d1.txt")));
+    	assertFalse(Files.exists(Paths.get(file2)));
     	
     	GitCli.main(new String[] {"branch", "b2"});
     	GitCli.main(new String[] {"checkout", "b2"});
     	
-    	try(PrintWriter out = new PrintWriter(new File("testdir/dir1/file_d1.txt"))) {
+    	try(PrintWriter out = new PrintWriter(new File(file2))) {
     		out.println("b2 content");
     	}
-    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"add", file2});
     	GitCli.main(new String[] {"commit", "message 3"});
     	
     	GitCli.main(new String[] {"checkout", "b1"});
-    	try (Scanner in = new Scanner(new File("testdir/dir1/file_d1.txt"))) {
+    	try (Scanner in = new Scanner(new File(file2))) {
     		assertEquals("b1 content", in.nextLine());
     	}
     	GitCli.main(new String[] {"checkout", "b2"});
-    	try (Scanner in = new Scanner(new File("testdir/dir1/file_d1.txt"))) {
+    	try (Scanner in = new Scanner(new File(file2))) {
     		assertEquals("b2 content", in.nextLine());
     	}
     }
     
     public void testIncorrectBranchRm() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
-    	GitCore core = new GitCore();
-    	try {
-    		core.makeDeleteBranch("master");
-    		assert false;
-    	} catch (BranchProblemException bpe) {
-    		assertEquals("You can't delete this branch while staying on it.", bpe.message);
-    	}
+    	assertEquals(
+    			"You can't delete this branch while staying on it.",
+    			GitCli.processArgs(new String[] {"branch", "-d", "master"})
+    			.get(0));
     }
     
     @Test
     public void testBranchDeleteAndRestore() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
     	
     	GitCli.main(new String[] {"branch", "b1"});
     	GitCli.main(new String[] {"checkout", "b1"});
     	
-    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"add", file2});
     	GitCli.main(new String[] {"commit", "message 2"});
     	
     	GitCli.main(new String[] {"checkout", "master"});
     	GitCli.main(new String[] {"branch", "-d", "b1"});
 
-    	GitCore core = new GitCore();
-    	
-    	try {
-    		core.makeCheckout(0);
-    	} catch (BranchProblemException e) {}
-    	core.makeBranch("b1");
-    	core.makeCheckout("b1");
-    	assertFalse(Files.exists(Paths.get("testdir/dir1/file_d1.txt")));
-    	assertTrue(Files.exists(Paths.get("testdir/file.txt")));
+    	GitCli.main(new String[] {"checkout", "0"});
+    	GitCli.main(new String[] {"branch", "b1"});
+    	GitCli.main(new String[] {"checkout", "b1"});
+
+    	assertFalse(Files.exists(Paths.get(file2)));
+    	assertTrue(Files.exists(Paths.get(file1)));
     }
     
     @Test
     public void testMergeNoConflict() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
     	
     	GitCli.main(new String[] {"branch", "b1"});
     	GitCli.main(new String[] {"checkout", "b1"});
     	
-    	GitCli.main(new String[] {"add", "testdir/dir1/file_d1.txt"});
+    	GitCli.main(new String[] {"add", file2});
     	GitCli.main(new String[] {"commit", "message 2"});
     	
     	GitCli.main(new String[] {"checkout", "master"});
@@ -309,14 +288,14 @@ public class AppTest extends Assert {
 		});
     	
     	assertEquals("master", core.getCurrentBranchName());
-    	assertTrue(Files.exists(Paths.get("testdir/dir1/file_d1.txt")));
-    	assertTrue(Files.exists(Paths.get("testdir/file.txt")));
+    	assertTrue(Files.exists(Paths.get(file2)));
+    	assertTrue(Files.exists(Paths.get(file1)));
     }
     
     @Test
     public void testMergeConflict() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
     	
     	GitCli.main(new String[] {"commit", "message 2"});
@@ -327,7 +306,7 @@ public class AppTest extends Assert {
     	GitCli.main(new String[] {"branch", "b1"});
     	GitCli.main(new String[] {"checkout", "b1"});
     	
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message b1"});
     	
     	GitCli.main(new String[] {"checkout", "master"});
@@ -349,65 +328,69 @@ public class AppTest extends Assert {
     @Test
     public void testLogBasic() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
-    	GitCore core = new GitCore();
-    	assertEquals("Empty log", core.getLog(-1).get(0));
+    	GitCli.main(new String[] {"add", file1});
+
+    	assertEquals("Empty log", 
+    			GitCli.processArgs(new String[] {"log"}).get(1));
     	GitCli.main(new String[] {"commit", "message 1"});
     	
-    	assertEquals("\nrevision: 1\nmessage 1", core.getLog(-1).get(0));
-    	assertEquals(core.getLog(-1), core.getLog(0));
+    	assertEquals("\nrevision: 1\nmessage 1", 
+    			GitCli.processArgs(new String[] {"log"}).get(1));
+    	assertEquals(
+    			GitCli.processArgs(new String[] {"log"}),
+    			GitCli.processArgs(new String[] {"log", "1"}));
     }
     
-    @Test(expected = BranchProblemException.class)
+
     public void testIncorrectBigCheckoutRevision() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
     	
-    	GitCore core = new GitCore();
-    	try {
-    		core.makeCheckout(2);
-    	} catch (BranchProblemException bpe) {
-    		assertEquals("revision number" + 3 + " is incorrect", bpe.message);
-    		throw bpe;
-    	}
+    	assertEquals(
+    			"revision number" + 2 + " is incorrect",
+    			GitCli.processArgs(new String[] {"checkout", "2"}).get(0));
+    	
+    	assertEquals(
+    			"revision number" + 0 + " is incorrect",
+    			GitCli.processArgs(new String[] {"checkout", "0"}).get(0));
+    	
+    	assertEquals(
+    			"revision number" + 2 + " is incorrect",
+    			GitCli.processArgs(new String[] {"reset", "2"}).get(0));
+    	
+    	assertEquals(
+    			"revision number" + 0 + " is incorrect",
+    			GitCli.processArgs(new String[] {"reset", "0"}).get(0));
     }
     
     @Test
     public void testDetachedState() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
     	
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 2"});
     	
-    	GitCore core = new GitCore();
-    	try {
-    		core.makeCheckout(0);
-    		assertTrue(false);
-    	} catch (BranchProblemException bpe) {
-    		assertEquals("HEAD detached on revison 1", bpe.message);
-    	}
+    	assertEquals("HEAD detached on revison 1",
+    			GitCli.processArgs(new String[] {"checkout", "1"}).get(1));
     	
-    	try {
-    		core.makeCommit("abc");
-    		assertTrue(false);
-    	} catch (BranchProblemException bpe) {
-    		assertEquals("Staying not at end of some branch", bpe.message);
-    	}
+    	assertEquals("Staying not at end of some branch",
+    			GitCli.processArgs(new String[] {"commit", "abc"}).get(1));
     }
     
     @Test
     public void testEmptyCommitNotFails() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"add", file1});
     	GitCli.main(new String[] {"commit", "message 1"});
     	
     	GitCli.main(new String[] {"commit", "message 2"});
-    	
-    	GitCore core = new GitCore();
-    	core.getLog(-1);
+
+    	ArrayList<String> logRes = GitCli.processArgs(new String[] {"log"});
+    	assertEquals("\nrevision: 2\nmessage 2", logRes.get(1));
+    	assertEquals("\nrevision: 1\nmessage 1", logRes.get(3));
     }
     
     @Test
@@ -416,8 +399,8 @@ public class AppTest extends Assert {
     	GitCli.main(new String[] {"add", "one.txt"});
     	GitCli.main(new String[] {"commit", "message 2"});
     	
-    	GitCore core = new GitCore();
-    	core.getLog(-1);
+    	ArrayList<String> logRes = GitCli.processArgs(new String[] {"log"});
+    	assertEquals("\nrevision: 1\nmessage 2", logRes.get(1));
     }
     
 }
