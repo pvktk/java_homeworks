@@ -7,6 +7,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -187,7 +188,8 @@ public class ComplexTests extends Assert {
 	
 	@Test
 	public void testResetWithLogAndStatus() throws IOException {
-		FileUtils.touch(Paths.get(testdir).resolve("file1").toFile());
+		Files.createDirectory(Paths.get(testdir));
+		
 		try (PrintWriter out = new PrintWriter(new File("testdir/file1"))) {
 			out.println("initial content");
 		}
@@ -319,8 +321,9 @@ public class ComplexTests extends Assert {
 	}
 	
 	@Test
-	public void testBranchRM() throws IOException {
-		FileUtils.touch(Paths.get(testdir).resolve("file1").toFile());
+	public void testBranchRM() throws IOException, UnversionedException, BranchProblemException {
+		Files.createDirectory(Paths.get(testdir));
+		
 		try (PrintWriter out = new PrintWriter(new File("testdir/file1"))) {
 			out.println("initial content");
 		}
@@ -347,12 +350,90 @@ public class ComplexTests extends Assert {
 		try (PrintWriter out = new PrintWriter("testdir/file1")) {
 			out.println("revision 3 content");
 		}
+		
 		GitCli.main(new String[] {"commit", "mes 3"});
+		
+		ArrayList<String> beforeRMLog = GitCli.processArgs(new String[] {"log"});
+		assertEquals(beforeRMLog, GitCli.processArgs(new String[] {"log", "3"}));
 		
 		assertEquals(
 				Arrays.asList(
 						"Deleting branch b1",
 						"You can't delete this branch while staying on it."),
 				GitCli.processArgs(new String[] {"branch", "-d", "b1"}));
+		
+		GitCli.main(new String[] {"checkout", "master"});
+		try (Scanner in = new Scanner(new File("testdir/file1"))) {
+			assertEquals("revision 2 content", in.nextLine());
+		}
+		
+		assertEquals(
+				Arrays.asList(
+						"Deleting branch b1"),
+				GitCli.processArgs(new String[] {"branch", "-d", "b1"}));
+		
+		assertEquals(beforeRMLog, GitCli.processArgs(new String[] {"log", "3"}));
+		assertEquals(
+				Arrays.asList(
+						"Checking out branch...",
+						"Branch not exists: b1"),
+				GitCli.processArgs(new String[] {"checkout", "b1"}));
+		GitCli.main(new String[] {"checkout", "3"});
+		
+		assertEquals(beforeRMLog, GitCli.processArgs(new String[] {"log"}));
+		GitCore core = new GitCore();
+		core.makeBranch("b1");
+		core.makeCheckout("b1");
+	}
+	
+	@Test
+	public void testMergeNoConflict() throws IOException, UnversionedException, BranchProblemException {
+		Files.createDirectory(Paths.get(testdir));
+		try (PrintWriter out = new PrintWriter(new File("testdir/file1"))) {
+			out.println("initial 1 content");
+		}
+		try (PrintWriter out = new PrintWriter(new File("testdir/file2"))) {
+			out.println("initial 2 content");
+		}
+
+		GitCli.main(new String[] {"init"});
+		GitCli.main(new String[] {"add", "testdir/file1", "testdir/file2"});
+		GitCli.main(new String[] {"commit", "mes 1"});
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file2"))) {
+			out.println("2 content");
+		}
+		
+		GitCli.main(new String[] {"add", "testdir/file2"});
+		GitCli.main(new String[] {"commit", "mes 2"});
+		
+		GitCli.main(new String[] {"checkout", "1"});
+		GitCli.main(new String[] {"branch", "b1"});
+		GitCli.main(new String[] {"checkout", "b1"});
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file3"))) {
+			out.println("3 content");
+		}
+		
+		GitCli.main(new String[] {"add", "testdir/file3"});
+		GitCli.main(new String[] {"commit", "mes 3"});
+		
+		GitCli.main(new String[] {"checkout", "master"});
+		
+		assertEquals(Arrays.asList("Merging branch b1 to current state"),
+				GitCli.processArgs(new String[] {"merge", "b1"}));
+				
+		//new GitCore().makeMerge("b1");
+		
+		assertEquals(
+				Arrays.asList(
+						"Status:",
+						"branch master",
+						"Staged files:\n________________",
+						"testdir/file3",
+						"Deleted files:\n________________",
+						"Changed files:\n________________",
+						"Untracked files:\n________________"),
+				GitCli.processArgs(new String[] {"status"}).subList(0, 7));
 	}
 }

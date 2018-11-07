@@ -27,35 +27,6 @@ public class GitCli {
 		}
 	}
 
-	public static Path conflictFileChooser(Path p1, Path p2) {
-		System.out.println("merge conflict between " + p1.toString() + " and " + p2.toString());
-		printFile(p1);
-		printFile(p2);
-		int choice = 0;
-		while (!(choice == 1 || choice == 2 || choice == 3)) {
-			System.out.println("Enter \"1\", if you want to use first file in merging\n"
-					+ "Enter \"2\" to use second\n"
-					+ "Enter \"3\" to specify file manually");
-			try (Scanner in = new Scanner(System.in)) {
-				choice = in.nextInt();
-			} catch (Exception e) {}
-		}
-		
-		switch (choice) {
-		case 1:
-			return p1;
-		case 2:
-			return p2;
-		default:
-			String choosenPath = null;
-			System.out.println("Specify path to file:");
-			try (Scanner in = new Scanner(System.in)) {
-				choosenPath = in.nextLine();
-			}
-			return Paths.get(choosenPath);
-		}
-	}
-
 	public static void main(String[] args) throws JsonGenerationException, JsonMappingException {
 		System.out.println(
 				processArgs(args)
@@ -131,8 +102,8 @@ public class GitCli {
 				}
 				break;
 			case "merge":
-				res.add("Merging branch " + args[1] + " to " + core.getCurrentBranchName());
-				core.makeMerge(args[1], GitCli::conflictFileChooser);
+				res.add("Merging branch " + args[1] + " to current state");
+				res.addAll(core.makeMerge(args[1]));
 				break;
 			default:
 				res.add("Unknown argument: " + args[0]);

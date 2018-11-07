@@ -5,13 +5,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
-import java.util.function.BiFunction;
-
 import org.apache.commons.io.FileUtils;
 
 
@@ -265,67 +262,6 @@ public class AppTest extends Assert {
     }
     
     @Test
-    public void testMergeNoConflict() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
-    	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", file1});
-    	GitCli.main(new String[] {"commit", "message 1"});
-    	
-    	GitCli.main(new String[] {"branch", "b1"});
-    	GitCli.main(new String[] {"checkout", "b1"});
-    	
-    	GitCli.main(new String[] {"add", file2});
-    	GitCli.main(new String[] {"commit", "message 2"});
-    	
-    	GitCli.main(new String[] {"checkout", "master"});
-    	
-    	GitCore core = new GitCore();
-    	core.makeMerge("b1", new BiFunction<Path, Path, Path>() {
-			
-			@Override
-			public Path apply(Path t, Path u) {
-				return null;
-			}
-		});
-    	
-    	assertEquals("master", core.getCurrentBranchName());
-    	assertTrue(Files.exists(Paths.get(file2)));
-    	assertTrue(Files.exists(Paths.get(file1)));
-    }
-    
-    @Test
-    public void testMergeConflict() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
-    	GitCli.main(new String[] {"init"});
-    	GitCli.main(new String[] {"add", file1});
-    	GitCli.main(new String[] {"commit", "message 1"});
-    	
-    	GitCli.main(new String[] {"commit", "message 2"});
-    	assertTrue(Files.exists(Paths.get(".myGitDataStorage/testdir/file.txtr0")));
-    	assertFalse(Files.exists(Paths.get(".myGitDataStorage/testdir/file.txtr1")));
-    	
-    	GitCli.main(new String[] {"checkout", "1"});
-    	GitCli.main(new String[] {"branch", "b1"});
-    	GitCli.main(new String[] {"checkout", "b1"});
-    	
-    	GitCli.main(new String[] {"add", file1});
-    	GitCli.main(new String[] {"commit", "message b1"});
-    	
-    	GitCli.main(new String[] {"checkout", "master"});
-    	
-    	GitCore core = new GitCore();
-    	
-    	core.makeMerge("b1", new BiFunction<Path, Path, Path>() {
-			
-			@Override
-			public Path apply(Path t, Path u) {
-				assertEquals(".myGitDataStorage/testdir/file.txtr0", t.toString());
-				assertEquals(".myGitDataStorage/testdir/file.txtr2", u.toString());
-				return t;
-			}
-		});
-    	
-    }
-    
-    @Test
     public void testLogBasic() throws JsonParseException, IOException, UnversionedException, BranchProblemException {
     	GitCli.main(new String[] {"init"});
     	GitCli.main(new String[] {"add", file1});
@@ -376,7 +312,7 @@ public class AppTest extends Assert {
     	assertEquals("HEAD detached on revison 1",
     			GitCli.processArgs(new String[] {"checkout", "1"}).get(1));
     	
-    	assertEquals("Staying not at end of some branch",
+    	assertEquals("Staying not at end of some branch.",
     			GitCli.processArgs(new String[] {"commit", "abc"}).get(1));
     }
     
