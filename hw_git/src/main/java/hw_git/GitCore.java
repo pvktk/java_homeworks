@@ -283,13 +283,7 @@ public class GitCore {
 	
 	void makeReset(int revision) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
 		findRepInformation();
-		/*
-		inform.revision = revision;
-		if (inform.currentBranchNumber != -1) {
-			inform.branchEnds.put(inform.currentBranchNumber, revision);
-		}
-		
-		*/
+
 		int currBranchT = inform.currentBranchNumber;
 		int currDetachedPosT = inform.detachedHeadRevision;
 		makeCheckout(revision);
@@ -338,24 +332,8 @@ public class GitCore {
 	}
 	
 	List<String> getDeletedFiles() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
-		//ArrayList<String> result = new ArrayList<>();
 		findRepInformation();
-		/*
-		int revision = inform.revision;
-		TreeMap<Integer, Integer> filesToRestore = new TreeMap<>();
-		collectVersionedFiles(revision, filesToRestore);
-		for (Entry<Integer, Integer> fileEnt : filesToRestore.entrySet()) {
-			String keyName = RepInformation.getKeyByValue(
-					fileEnt.getKey(), inform.fileNumber);
-			if (!Files.exists(
-					informPath.resolve(keyName)))
-			{
-				result.add(keyName);
-			}
-		}
-		*/
-		
-		
+
 		return inform.stageRemovedFiles.stream()
 				.map(i -> RepInformation.getKeyByValue(i, inform.fileNumber))
 				.collect(Collectors.toList());
@@ -450,7 +428,6 @@ public class GitCore {
 	
 	private void removeFromRep(String filename) throws IOException {
 		Path keypath = getKeyPath(filename);
-		//int revision = inform.revision;
 		
 		Integer fileNumber = inform.fileNumber.get(keypath.toString());
 		
@@ -458,7 +435,6 @@ public class GitCore {
 			throw new FileNotFoundException("File not versioned: " + filename);
 		}
 
-		//inform.removedFiles.get(revision).add(fileNumber);
 		inform.stageRemovedFiles.add(fileNumber);
 		
 		Files.deleteIfExists(informPath.resolve(stageFolder).resolve(keypath));
@@ -521,11 +497,6 @@ public class GitCore {
 	
 	ArrayList<String> makeMerge(String otherBranchName) throws JsonParseException, JsonMappingException, IOException, UnversionedException, BranchProblemException {
 		findRepInformation();
-		/*
-		if (inform.currentBranchNumber == -1) {
-			throw new BranchProblemException("You have to stay at some branch before merging");
-		}
-		*/
 		
 		Integer otherBranchNumber = inform.branchNumbers.get(otherBranchName);
 		if (otherBranchNumber == null) {
@@ -556,8 +527,6 @@ public class GitCore {
 			
 			if (otherEntRevision == null
 					|| otherEntRevision <= lca) {
-				//restoreFile(entFileNum, thisEntRevision);
-				//makeAdd(new String[] {keyName});
 			} else if (thisEntRevision <= lca && otherEntRevision > lca) {
 				restoreFile(entFileNum, otherEntRevision);
 				makeAdd(new String[] {keyName});
@@ -588,7 +557,6 @@ public class GitCore {
 				String keyName = RepInformation.getKeyByValue(
 						fileEntry.getKey(), inform.fileNumber);
 				makeAdd(new String[] {keyName});
-				//res.add(keyName);
 			}
 		}
 		

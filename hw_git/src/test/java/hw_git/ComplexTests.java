@@ -423,7 +423,8 @@ public class ComplexTests extends Assert {
 		
 		GitCli.main(new String[] {"checkout", "master"});
 		
-		assertEquals(Arrays.asList("Merging branch b1 to current state"),
+		assertEquals(Arrays.asList("Merging branch b1 to current state."
+				+ "\nYou should make commit then."),
 				GitCli.processArgs(new String[] {"merge", "b1"}));
 				
 		//new GitCore().makeMerge("b1");
@@ -514,7 +515,8 @@ public class ComplexTests extends Assert {
 		
 		GitCli.main(new String[] {"checkout", "master"});
 		
-		assertEquals(Arrays.asList("Merging branch b1 to current state",
+		assertEquals(Arrays.asList("Merging branch b1 to current state."
+				+ "\nYou should make commit then.",
 				"Please, resolve conflicts in these files, and \"add\" them to commit:",
 				"testdir/file4"),
 				GitCli.processArgs(new String[] {"merge", "b1"}));

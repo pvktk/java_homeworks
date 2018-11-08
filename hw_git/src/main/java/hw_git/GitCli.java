@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
@@ -102,7 +101,8 @@ public class GitCli {
 				}
 				break;
 			case "merge":
-				res.add("Merging branch " + args[1] + " to current state");
+				res.add("Merging branch " + args[1] + " to current state."
+						+ "\nYou should make commit then.");
 				res.addAll(core.makeMerge(args[1]));
 				break;
 			default:
