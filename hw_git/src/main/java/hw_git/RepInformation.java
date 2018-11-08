@@ -34,6 +34,8 @@ public class RepInformation {
 	TreeMap<Integer, Integer> branchEnds = new TreeMap<>();
 	
 	ArrayList<Integer> numberOfStartedBranchesAtRevision = new ArrayList<>();
+	
+	ArrayList<Integer> stageRemovedFiles = new ArrayList<>();
 
 	public RepInformation() {
 		branchNumbers.put("master", 0);
@@ -178,6 +180,14 @@ public class RepInformation {
 
 	public void setDetachedHeadRevision(int detachedHeadRevision) {
 		this.detachedHeadRevision = detachedHeadRevision;
+	}
+
+	public ArrayList<Integer> getStageRemovedFiles() {
+		return stageRemovedFiles;
+	}
+
+	public void setStageRemovedFiles(ArrayList<Integer> stageRemovedFiles) {
+		this.stageRemovedFiles = stageRemovedFiles;
 	}
 	
 }

@@ -139,11 +139,14 @@ public class AppTest extends Assert {
     	GitCli.main(new String[] {"commit", "message 2"});
     	Files.delete(Paths.get(file1));
     	GitCli.main(new String[] {"rm", file1});
+    	GitCli.main(new String[] {"commit", "remove file1"});
     	GitCli.main(new String[] {"checkout", "2"});
-    	assertFalse(Files.exists(Paths.get(file1)));
+    	assertTrue(Files.exists(Paths.get(file1)));
     	
     	GitCli.main(new String[] {"checkout", "1"});
     	assertTrue(Files.exists(Paths.get(file1)));
+    	GitCli.main(new String[] {"checkout", "master"});
+    	assertFalse(Files.exists(Paths.get(file1)));
     }
     
     @Test
@@ -167,7 +170,7 @@ public class AppTest extends Assert {
     	
     	Files.delete(Paths.get(file1));
     	
-    	assertEquals(core.getDeletedFiles(), Arrays.asList(file1));
+    	assertEquals(core.getChangedFiles(), Arrays.asList(file1));
     	
     }
     
@@ -337,6 +340,40 @@ public class AppTest extends Assert {
     	
     	ArrayList<String> logRes = GitCli.processArgs(new String[] {"log"});
     	assertEquals("\nrevision: 1\nmessage 2", logRes.get(1));
+    }
+    
+    @Test
+    public void testResetClearsStage() throws JsonGenerationException, JsonMappingException {
+    	GitCli.main(new String[] {"init"});
+    	GitCli.main(new String[] {"add", "one.txt"});
+    	GitCli.main(new String[] {"commit", "message 1"});
+    	
+    	GitCli.main(new String[] {"add", "testdir/file.txt"});
+    	GitCli.main(new String[] {"rm", "one.txt"});
+    	
+    	assertEquals(
+				Arrays.asList(
+						"Status:",
+						"branch master",
+						"Staged files:\n________________",
+						"testdir/file.txt",
+						"Deleted files:\n________________",
+						"one.txt",
+						"Changed files:\n________________",
+						"Untracked files:\n________________"),
+				GitCli.processArgs(new String[] {"status"}).subList(0, 8));
+    	
+    	GitCli.main(new String[] {"reset", "1"});
+    	
+    	assertEquals(
+				Arrays.asList(
+						"Status:",
+						"branch master",
+						"Staged files:\n________________",
+						"Deleted files:\n________________",
+						"Changed files:\n________________",
+						"Untracked files:\n________________"),
+				GitCli.processArgs(new String[] {"status"}).subList(0, 6));
     }
     
 }

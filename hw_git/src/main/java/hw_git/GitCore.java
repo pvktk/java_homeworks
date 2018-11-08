@@ -20,6 +20,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 
@@ -129,6 +130,9 @@ public class GitCore {
 			inform.branchEnds.put(inform.currentBranchNumber, inform.revision);
 			inform.numberOfStartedBranchesAtRevision.add(0);
 		}
+		
+		inform.removedFiles.get(inform.revision).addAll(inform.stageRemovedFiles);
+		inform.stageRemovedFiles.clear();
 		
 		Files.walkFileTree(
 				informPath.resolve(stageFolder),
@@ -290,6 +294,9 @@ public class GitCore {
 		int currDetachedPosT = inform.detachedHeadRevision;
 		makeCheckout(revision);
 		
+		FileUtils.cleanDirectory(Paths.get(stageFolder).toFile());
+		inform.stageRemovedFiles.clear();
+		
 		if (currBranchT != -1) {
 			inform.currentBranchNumber = currBranchT;
 			inform.branchEnds.put(currBranchT, revision);
@@ -331,9 +338,9 @@ public class GitCore {
 	}
 	
 	List<String> getDeletedFiles() throws JsonParseException, JsonMappingException, IOException, UnversionedException {
-		ArrayList<String> result = new ArrayList<>();
+		//ArrayList<String> result = new ArrayList<>();
 		findRepInformation();
-		
+		/*
 		int revision = inform.revision;
 		TreeMap<Integer, Integer> filesToRestore = new TreeMap<>();
 		collectVersionedFiles(revision, filesToRestore);
@@ -346,8 +353,12 @@ public class GitCore {
 				result.add(keyName);
 			}
 		}
-
-		return result;
+		*/
+		
+		
+		return inform.stageRemovedFiles.stream()
+				.map(i -> RepInformation.getKeyByValue(i, inform.fileNumber))
+				.collect(Collectors.toList());
 	}
 
 	
@@ -439,7 +450,7 @@ public class GitCore {
 	
 	private void removeFromRep(String filename) throws IOException {
 		Path keypath = getKeyPath(filename);
-		int revision = inform.revision;
+		//int revision = inform.revision;
 		
 		Integer fileNumber = inform.fileNumber.get(keypath.toString());
 		
@@ -447,7 +458,8 @@ public class GitCore {
 			throw new FileNotFoundException("File not versioned: " + filename);
 		}
 
-		inform.removedFiles.get(revision).add(fileNumber);
+		//inform.removedFiles.get(revision).add(fileNumber);
+		inform.stageRemovedFiles.add(fileNumber);
 		
 		Files.deleteIfExists(informPath.resolve(stageFolder).resolve(keypath));
 	}
@@ -521,7 +533,7 @@ public class GitCore {
 		}
 		
 		ArrayList<String> res = new ArrayList<>();
-		res.add("Please, resolve conflicts in these files:");
+		res.add("Please, resolve conflicts in these files, and \"add\" them to commit:");
 		
 		int currRev = inform.revision;
 		int otherRev = inform.branchEnds.get(otherBranchNumber);
@@ -555,11 +567,11 @@ public class GitCore {
 				File fOth = getStoragePath(Paths.get(keyName), otherEntRevision).toFile();
 				
 				try (PrintWriter out = new PrintWriter(new File(keyName))) {
-					out.println("===============Content from revision " + thisEntRevision + " ========");
+					out.println("===============Content from revision " + (thisEntRevision + 1) + " ========");
 					try (BufferedReader in = new BufferedReader(new FileReader(fCurr))) {
 						in.lines().forEach(l -> out.println(l));
 					}
-					out.println("===============Content from revision " + otherEntRevision + " ========");
+					out.println("===============Content from revision " + (otherEntRevision + 1) + " ========");
 					try (BufferedReader in = new BufferedReader(new FileReader(fOth))) {
 						in.lines().forEach(l -> out.println(l));
 					}

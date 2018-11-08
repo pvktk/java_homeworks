@@ -4,7 +4,9 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
@@ -12,6 +14,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 
@@ -435,5 +438,133 @@ public class ComplexTests extends Assert {
 						"Changed files:\n________________",
 						"Untracked files:\n________________"),
 				GitCli.processArgs(new String[] {"status"}).subList(0, 7));
+	}
+	
+	@Test
+	public void testMergeWithConflicts() throws IOException, UnversionedException, BranchProblemException {
+		Files.createDirectory(Paths.get(testdir));
+		try (PrintWriter out = new PrintWriter(new File("testdir/file1"))) {
+			out.println("initial 1 content");
+		}
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file2"))) {
+			out.println("initial 2 content");
+		}
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file3"))) {
+			out.println("initial 3 content");
+		}
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file4"))) {
+			out.println("initial 4 content");
+		}
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file5"))) {
+			out.println("initial 5 content");
+		}
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file6"))) {
+			out.println("initial 6 content");
+		}
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file7"))) {
+			out.println("initial 7 content");
+		}
+
+		GitCli.main(new String[] {"init"});
+		GitCli.main(new String[] {"add", "testdir/file1", "testdir/file2", "testdir/file5"});
+		GitCli.main(new String[] {"add", "testdir/file3", "testdir/file4", "testdir/file7"});
+		GitCli.main(new String[] {"commit", "mes 1"});
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file2"))) {
+			out.println("2 content");
+		}
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file4"))) {
+			out.println("4 content");
+		}
+		
+		GitCli.main(new String[] {"rm", "testdir/file7"});
+		GitCli.main(new String[] {"add", "testdir/file2", "testdir/file4"});
+		GitCli.main(new String[] {"commit", "mes 2"});
+		
+		GitCli.main(new String[] {"checkout", "1"});
+		GitCli.main(new String[] {"branch", "b1"});
+		GitCli.main(new String[] {"checkout", "b1"});
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file3"))) {
+			out.println("3 from b1 content");
+		}
+		
+		GitCli.main(new String[] {"rm", "testdir/file5"});
+		
+		try (PrintWriter out = new PrintWriter(new File("testdir/file4"))) {
+			out.println("4 b1 content");
+		}
+		GitCli.main(new String[] {"add", "testdir/file3", "testdir/file4", "testdir/file6"});
+		GitCli.main(new String[] {"commit", "mes 3"});
+		
+		
+		GitCli.main(new String[] {"rm", "testdir/file6"});
+		GitCli.main(new String[] {"commit", "mes 4"});
+		
+		try (Scanner in = new Scanner(new File("testdir/file6"))) {
+			assertEquals("initial 6 content", in.nextLine());
+		}
+		
+		GitCli.main(new String[] {"checkout", "master"});
+		
+		assertEquals(Arrays.asList("Merging branch b1 to current state",
+				"Please, resolve conflicts in these files, and \"add\" them to commit:",
+				"testdir/file4"),
+				GitCli.processArgs(new String[] {"merge", "b1"}));
+				
+		//new GitCore().makeMerge("b1");
+		
+		assertEquals(
+				Arrays.asList(
+						"Status:",
+						"branch master",
+						"Staged files:\n________________",
+						"testdir/file3",
+						"testdir/file7",
+						"Deleted files:\n________________",
+						"Changed files:\n________________",
+						"testdir/file3",
+						"testdir/file4",
+						"Untracked files:\n________________"),
+				GitCli.processArgs(new String[] {"status"}).subList(0, 10));
+		
+		try (Scanner in = new Scanner(new File("testdir/file1"))) {
+			assertEquals("initial 1 content", in.nextLine());
+		}
+		
+		try (Scanner in = new Scanner(new File("testdir/file2"))) {
+			assertEquals("2 content", in.nextLine());
+		}
+		
+		try (Scanner in = new Scanner(new File("testdir/file3"))) {
+			assertEquals("3 from b1 content", in.nextLine());
+		}
+		
+		try (BufferedReader in = new BufferedReader(new FileReader(new File("testdir/file4")))) {
+			
+			assertEquals(Arrays.asList(
+					"===============Content from revision 2 ========",
+					"4 content",
+					"===============Content from revision 3 ========",
+					"4 b1 content")
+			, in.lines().collect(Collectors.toList()));
+		}
+		
+		try (Scanner in = new Scanner(new File("testdir/file5"))) {
+			assertEquals("initial 5 content", in.nextLine());
+		}
+		
+		assertFalse(Files.exists(Paths.get("testdir/file6")));
+		
+		try (Scanner in = new Scanner(new File("testdir/file7"))) {
+			assertEquals("initial 7 content", in.nextLine());
+		}
 	}
 }
