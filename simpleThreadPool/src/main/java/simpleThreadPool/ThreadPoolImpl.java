@@ -17,6 +17,7 @@ public class ThreadPoolImpl implements ThreadPool{
 	public ThreadPoolImpl(int nthreads) {
 		for (int i = 0; i < nthreads; i++) {
 			Thread t = new Thread(new Worker(tasks));
+			t.setDaemon(true);
 			pool.add(t);
 			t.start();
 		}

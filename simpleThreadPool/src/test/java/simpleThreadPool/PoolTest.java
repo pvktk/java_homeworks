@@ -111,4 +111,11 @@ public class PoolTest extends Assert{
 			assertEquals(nth, thNames.stream().distinct().count());
 		}
 	}
+	
+	@Test
+	public void testSameObjects() throws LightExecutionException, InterruptedException {
+		ThreadPool pool = new ThreadPoolImpl(1);
+		LightFuture<Integer> f1 = pool.submit(() -> 1);
+		assertTrue(f1.get() == f1.get());
+	}
 }
