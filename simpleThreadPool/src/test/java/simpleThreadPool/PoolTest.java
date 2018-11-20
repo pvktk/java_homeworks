@@ -78,9 +78,9 @@ public class PoolTest extends Assert{
 						l.wait();
 				}
 			} catch (InterruptedException e) {
-				int i = 1/0;
+				throw new RuntimeException();
 			}
-			return 1;
+			//return 1;
 		});
 		pool.shutdown();
 		f.get();

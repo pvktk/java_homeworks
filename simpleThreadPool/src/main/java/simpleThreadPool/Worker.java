@@ -51,7 +51,7 @@ public class Worker implements Runnable {
 				try {
 					res =  nextFunc.apply(get());
 				} catch (Exception e) {
-					int i = 1 / 0;
+					throw new RuntimeException();
 				}
 				return res;
 			});
