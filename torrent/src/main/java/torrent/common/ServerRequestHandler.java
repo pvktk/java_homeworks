@@ -1,38 +1,37 @@
-package torrent.server;
+package torrent.common;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
-import torrent.common.ConcreteRequestHandler;
-import torrent.common.RequestHandler;
-
-public class ServerRequestHandler implements RequestHandler {
+public class ServerRequestHandler{
 	
-	private ByteBuffer inputBuffer = ByteBuffer.allocate(10);
-	private ByteBuffer outputBuffer = ByteBuffer.allocate(10);
+	private ByteBuffer inputBuffer = ByteBuffer.allocate(1000);
+	private ByteBuffer outputBuffer;
 	
-	private ConcreteRequestHandler[] handlers;
+	public enum MessageProcessStatus {INCOMPLETE, ERROR, SUCCESS};
 	
-	public ServerRequestHandler(ConcreteRequestHandler... handlers) {
+	private ConcreteTaskHandler[] handlers;
+	
+	public ServerRequestHandler(ConcreteTaskHandler[] handlers) {
 		this.handlers = handlers;
 	}
 	
-	@Override
 	public ByteBuffer getReceivingBuffer() {
 		inputBuffer.clear();
 		return inputBuffer;
 	}
 
-	@Override
-	public boolean inputMessageComplete() {
+	public MessageProcessStatus messageProcessAttemp(InetSocketAddress clientInf) {
 		DataInputStream dInp = new DataInputStream(
 				new ByteArrayInputStream(inputBuffer.array(),
 						inputBuffer.arrayOffset(), 
 						inputBuffer.limit() - inputBuffer.position()));
+
 		ByteArrayOutputStream bout = new ByteArrayOutputStream();
 		DataOutputStream dOut = new DataOutputStream(bout);
 		
@@ -40,30 +39,24 @@ public class ServerRequestHandler implements RequestHandler {
 		try {
 			typeIndex = dInp.readByte();
 		} catch (IOException e) {
-			return false;
+			return MessageProcessStatus.INCOMPLETE;
 		}
 		
 		if (typeIndex > handlers.length) {
-			return false;
+			return MessageProcessStatus.ERROR;
 		}
 		
-		if (!handlers[typeIndex - 1].computeResult(dInp, dOut)) {
-			return false;
+		MessageProcessStatus status = handlers[typeIndex - 1].computeResult(dInp, dOut, clientInf);
+		if (status != MessageProcessStatus.SUCCESS) {
+			return status;
 		}
 		
 		outputBuffer = ByteBuffer.wrap(bout.toByteArray());
-		return true;
+		return status;
 	}
 
-	@Override
 	public ByteBuffer getTransmittingBuffer() {
 		return outputBuffer;
-	}
-
-	@Override
-	public boolean allOutputSent() {
-		// TODO Auto-generated method stub
-		return false;
 	}
 
 }
