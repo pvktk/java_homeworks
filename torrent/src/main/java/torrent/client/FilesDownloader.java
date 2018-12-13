@@ -2,36 +2,38 @@ package torrent.client;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import torrent.common.StorageManager;
 
-public class FilesDownloader implements Runnable {
+public class FilesDownloader {
 	
 	StorageManager<FilesHolder> stm;
-	Socket toServer;
+	SocketAddress toServer;
 	
-	Map<Integer, List<InetSocketAddress>> fileSources = new HashMap<>();
-	Map<Integer, List<Integer>> avaliablePieces = new HashMap<>();
-	Map<Integer, Map<Integer, PieceDownloader>> downloadingPieces = new HashMap<>();
+	ExecutorService pool = Executors.newFixedThreadPool(4);
 	
-	public FilesDownloader(StorageManager<FilesHolder> stm, Socket toServer) {
+	Map<Integer, SingleFileDownloader> fileDownloads = new HashMap<>();
+	
+	public FilesDownloader(StorageManager<FilesHolder> stm, SocketAddress toServer) {
 		this.stm = stm;
 		this.toServer = toServer;
 	}
-
-	@Override
-	public void run() {
-		try {
-			Thread.sleep(10000);
-			
-			
-		} catch (InterruptedException e) {
-			return;
+	
+	public boolean startFileDownload(int fileId) {
+		if (fileDownloads.containsKey(fileId)) {
+			return false;
 		}
+		SingleFileDownloader downloader = new SingleFileDownloader(toServer, stm, fileId);
+		fileDownloads.put(fileId, downloader);
+		pool.execute(downloader);
+		return true;
 	}
 
 }

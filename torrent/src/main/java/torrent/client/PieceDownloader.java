@@ -1,5 +1,6 @@
 package torrent.client;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -9,11 +10,11 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 	private int fileId;
 	private int pieceOffset, pieceLength;
 	private int pieceIdx;
-	private FilesDownloader filesDownloader;
+	private SingleFileDownloader filesDownloader;
 	
 	private ByteBuffer buffer;
 	
-	public PieceDownloader(FilesDownloader filesDownloader, int fileId, int pieceIdx) {
+	public PieceDownloader(SingleFileDownloader filesDownloader, int fileId, int pieceIdx) {
 		this.filesDownloader = filesDownloader;
 		this.fileId = fileId;
 		
@@ -39,7 +40,12 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 			attachment.read(buffer, attachment, this);
 		} else {
 			filesDownloader.stm.data.completePieces.get(fileId).add(pieceIdx);
-			filesDownloader.downloadingPieces.get(fileId).remove(pieceIdx);
+			try {
+				attachment.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 
