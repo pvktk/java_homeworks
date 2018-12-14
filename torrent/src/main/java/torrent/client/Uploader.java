@@ -1,0 +1,30 @@
+package torrent.client;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
+public class Uploader {
+	public static int uploadAndGetId(SocketAddress addr, String filePath) throws IOException {
+		try (
+				Socket s = new Socket();
+				DataOutputStream dout = new DataOutputStream(s.getOutputStream());
+				DataInputStream dinp = new DataInputStream(s.getInputStream())
+		) {
+			s.connect(addr, 10000);
+			if (!Files.isRegularFile(Paths.get(filePath))) {
+				return -1;
+			}
+			long len = Paths.get(filePath).toFile().length();
+			dout.writeByte(2);
+			dout.writeUTF(Paths.get(filePath).getFileName().toString());
+			dout.writeLong(len);
+			
+			return dinp.readInt();
+		}
+	}
+}

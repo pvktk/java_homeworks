@@ -14,29 +14,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import torrent.common.StorageManager;
+public class SingleFileDownloader implements Runnable {
 
-public class SingleFileDownloader implements Runnable{
-	
 	private SocketAddress srvAddr;
-	final StorageManager<FilesHolder> stm;
+	final FilesHolder filesHolder;
 	private final int fileId;
 	private final int numPieces;
 
 	private Random rand = new Random(3);
-	
+
 	private List<SocketAddress> fileSources = new ArrayList<>();
 	private Map<Integer, List<SocketAddress>> pieceSources = new HashMap<>();
 	private Map<Integer, AsynchronousSocketChannel> pieceChannels = new HashMap<>();
-	
-	public SingleFileDownloader(SocketAddress srvAddr, StorageManager<FilesHolder> stm, int fileId) {
+
+	public SingleFileDownloader(SocketAddress srvAddr, FilesHolder stm, int fileId) {
 		this.srvAddr = srvAddr;
-		this.stm = stm;
+		this.filesHolder = stm;
 		this.fileId = fileId;
-		
-		numPieces = stm.data.numParts(fileId);
+
+		numPieces = stm.numParts(fileId);
 	}
-	
+
 	private void updateFileSources() {
 		DataOutputStream out;
 		DataInputStream in;
@@ -44,41 +42,41 @@ public class SingleFileDownloader implements Runnable{
 			toServer.connect(srvAddr);
 			out = new DataOutputStream(toServer.getOutputStream());
 			in = new DataInputStream(toServer.getInputStream());
-				out.writeByte(3);
-				out.writeInt(fileId);
-				
-				int clientsCount = in.readInt();
-				fileSources.clear();
-				byte[] ipBuf = new byte[4];
-				for (int i = 0; i < clientsCount; i++) {
-					in.readFully(ipBuf);
-				
-					fileSources.add(new InetSocketAddress(InetAddress.getByAddress(ipBuf),
-							in.readShort()));
-				}
+			out.writeByte(3);
+			out.writeInt(fileId);
+
+			int clientsCount = in.readInt();
+			fileSources.clear();
+			byte[] ipBuf = new byte[4];
+			for (int i = 0; i < clientsCount; i++) {
+				in.readFully(ipBuf);
+
+				fileSources.add(new InetSocketAddress(InetAddress.getByAddress(ipBuf),
+						in.readShort()));
+			}
 		} catch (IOException e) {
 			System.out.println("SourceUpdater: creation of output stream failed while update file sources");
 		}
 	}
-	
+
 	private void updatePieceSources() {
 		DataOutputStream out;
 		DataInputStream in;
-		
+
 		pieceSources.clear();
 		for (int i = 0; i < numPieces; i++) {
 			pieceSources.put(i, new ArrayList<>());
 		}
-		
+
 		for (SocketAddress addr : fileSources) {
 			try (Socket othClient = new Socket()) {
 				othClient.connect(addr, 10000);
 				out = new DataOutputStream(othClient.getOutputStream());
 				in = new DataInputStream(othClient.getInputStream());
-				
+
 				out.writeByte(1);
 				out.writeInt(fileId);
-				
+
 				int partCount = in.readInt();
 
 				for (int i = 0; i < partCount; i++) {
@@ -91,10 +89,10 @@ public class SingleFileDownloader implements Runnable{
 			}
 		}
 	}
-	
+
 	private void dispatchPieceDownloaders() {
 		for (int i = 0; i < numPieces; i++) {
-			if (stm.data.completePieces.get(fileId).contains(i)) {
+			if (filesHolder.completePieces.get(fileId).contains(i)) {
 				pieceChannels.remove(i);
 				continue;
 			}
@@ -105,11 +103,11 @@ public class SingleFileDownloader implements Runnable{
 					pieceChannels.remove(i);
 				}
 			}
-			
+
 			List<SocketAddress> sources = pieceSources.get(i);
 			if (!sources.isEmpty()) {
 				int rIdx = rand.nextInt(sources.size());
-				
+
 				try {
 					chan = AsynchronousSocketChannel.open();
 				} catch (IOException e) {
@@ -124,19 +122,49 @@ public class SingleFileDownloader implements Runnable{
 		}
 	}
 
-	@Override
-	public void run() {
-		while (true) {
+	private boolean checkIfComplete() {
+		if (filesHolder.completePieces.get(fileId).size() < filesHolder.numParts(fileId)) {
+			return false;
+		}
+		try {
+			filesHolder.completedFiles.add(fileId);
+			filesHolder.save();
+		} catch (IOException e){
+			e.printStackTrace();
+		}
+		return true;
+	}
+
+	private void closeAllChannels() {
+		pieceChannels.forEach((i, ch) -> {
 			try {
-				Thread.sleep(10000);
-			} catch (InterruptedException e) {
+				ch.close();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		});
+	}
+
+	@Override
+	public void  run() {
+		while (true) {
+			if (checkIfComplete()) {
+				closeAllChannels();
 				return;
 			}
 			updateFileSources();
 			updatePieceSources();
 			dispatchPieceDownloaders();
-			if (stm.data.completedFiles.contains(fileId)) {
+
+			if (filesHolder.completedFiles.contains(fileId)) {
 				break;
+			}
+
+			try {
+				Thread.sleep(10000);
+			} catch (InterruptedException e) {
+				closeAllChannels();
+				return;
 			}
 		}
 	}
