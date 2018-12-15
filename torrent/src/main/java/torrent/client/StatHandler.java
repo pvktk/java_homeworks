@@ -1,4 +1,4 @@
-package torrent.server;
+package torrent.client;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -7,39 +7,41 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Set;
 
+import torrent.common.ConcreteTaskHandler;
 import torrent.common.ServerRequestHandler.MessageProcessStatus;
 
-public class SourcesHandler extends AbstractServerTaskHandler {
-
-	public SourcesHandler(StorageManager stm) {
-		super(stm);
+public class StatHandler implements ConcreteTaskHandler {
+	
+	private final FilesHolder fHolder;
+	
+	StatHandler(FilesHolder fHolder) {
+		this.fHolder = fHolder;
 	}
 
 	@Override
 	public MessageProcessStatus computeResult(DataInputStream in, DataOutputStream out, InetSocketAddress clientInf) {
 		try {
 			int id = in.readInt();
-
-			if (!storage.data.map.containsKey(id)) {
+			
+			Set<Integer> pieces = fHolder.completePieces.get(id);
+			
+			if (pieces == null) {
 				return MessageProcessStatus.ERROR;
 			}
-
-			Set<InetSocketAddress> clients = storage.data.map.get(id).clients;
-
-			out.writeInt(clients.size());
-
-			for (InetSocketAddress addr : storage.data.map.get(id).clients) {
-				out.write(addr.getAddress().getAddress());
-				out.writeShort(addr.getPort());
+			
+			out.writeInt(pieces.size());
+			
+			for (int i : pieces) {
+				out.write(i);
 			}
-
-		} catch (EOFException e){
+			
+			return MessageProcessStatus.SUCCESS;
+		} catch (EOFException e) {
 			return MessageProcessStatus.INCOMPLETE;
-		} catch (IOException e){
+		} catch (IOException e) {
 			return MessageProcessStatus.ERROR;
 		}
-
-		return MessageProcessStatus.SUCCESS;
+		
 	}
 
 }

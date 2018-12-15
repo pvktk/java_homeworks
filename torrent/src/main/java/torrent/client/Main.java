@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import torrent.common.ConcreteTaskHandler;
 import torrent.common.RequestCompletionHandler;
 import torrent.common.ServerRequestHandler;
-import torrent.common.StorageManager;
 import torrent.server.ListHandler;
 import torrent.server.OldClientsCleaner;
 import torrent.server.ServerData;
@@ -31,26 +30,19 @@ import torrent.server.UploadHandler;
 
 public class Main {
 
-	final SocketAddress toServer = new InetSocketAddress("localhost", 8081);
-
-	final static String helpMessage = 
-			"This is torrent client";
-
-	public Main() throws IOException {
-
-	}
 
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException, InterruptedException, ExecutionException {
+		
+		final SocketAddress toServer = new InetSocketAddress(args[0], 8081);
 
-		FilesHolder storageManager = new FilesHolder();
-
+		FilesHolder filesHolder = new FilesHolder();
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
 				System.out.println("Saving client state...");
 				try {
-					storageManager.save();
+					filesHolder.save();
 				} catch (JsonGenerationException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -65,12 +57,15 @@ public class Main {
 		});
 
 		Thread srvThread = new Thread(new ServerProcess(new ConcreteTaskHandler[] {
-
+				new StatHandler(filesHolder),
+				new GetHandler(filesHolder)
 		}));
+		
 		srvThread.setDaemon(true);
 		srvThread.start();
-
-		REPL.startRepl();
+		
+		REPL repl = new REPL(filesHolder, new FilesDownloader(filesHolder, toServer), toServer);
+		repl.startRepl();
 	}
 
 }

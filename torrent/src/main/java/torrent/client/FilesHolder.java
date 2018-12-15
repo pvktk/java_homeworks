@@ -23,23 +23,36 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class FilesHolder {
 
 	public final int pieceSize = 0xA00000;
-	//public final ReadWriteLock lock = new ReentrantReadWriteLock();
 	//рабочие данные
+	
+	public enum FileStatus {Complete, Downloading, Paused};
+	
 	public Map<Integer, byte[]> files = new ConcurrentHashMap<>();
 	public Map<Integer, String> filePaths = new ConcurrentHashMap<>();
 
-	public Set<Integer> completedFiles = ConcurrentHashMap.newKeySet();
+	public Map<Integer, FileStatus> fileStatus = new ConcurrentHashMap<>();
 	public Map<Integer, Set<Integer>> completePieces = new ConcurrentHashMap<>();
 	//
 
 	ObjectMapper mapper = new ObjectMapper();
 	private final Path mapPath = Paths.get("torrentData");
-	private final Path filesPaths = mapPath.resolve("filepaths");
-	private final Path compFiles = mapPath.resolve("completeFiles");
-	private final Path comPieces = mapPath.resolve("completePieces");
+	private final Path filePathsPath = mapPath.resolve("filepaths");
+	private final Path fileStatusPath = mapPath.resolve("filesStatus");
+	private final Path comletePiecesPath = mapPath.resolve("completePieces");
 
 	public int numParts(int fileId) {
 		return (files.get(fileId).length + pieceSize - 1) / pieceSize;
+	}
+	
+	public int pieceOffset(int fileId, int numPart) {
+		return pieceSize * numPart;
+	}
+	
+	public int pieceLenght(int fileId, int numPart) {
+		int file_length = files.get(fileId).length;
+		return (numPart + 1) * pieceSize >= file_length
+				? pieceSize
+						: (numPart + 1) * pieceSize - file_length;
 	}
 
 	public FilesHolder() throws JsonGenerationException, JsonMappingException, IOException {
@@ -47,9 +60,9 @@ public class FilesHolder {
 	}
 
 	public void save() throws JsonGenerationException, JsonMappingException, IOException {
-		mapper.writeValue(filesPaths.toFile(), filePaths);
-		mapper.writeValue(compFiles.toFile(), completedFiles);
-		mapper.writeValue(comPieces.toFile(), completePieces);
+		mapper.writeValue(filePathsPath.toFile(), filePaths);
+		mapper.writeValue(fileStatusPath.toFile(), fileStatus);
+		mapper.writeValue(comletePiecesPath.toFile(), completePieces);
 
 		for (Entry<Integer, String> ent : filePaths.entrySet()) {
 			try (FileOutputStream fout = new FileOutputStream(new File(ent.getValue()))) {
@@ -59,9 +72,9 @@ public class FilesHolder {
 	}
 	
 	public void save(int fileId) throws FileNotFoundException, IOException {
-		mapper.writeValue(filesPaths.toFile(), filePaths);
-		mapper.writeValue(compFiles.toFile(), completedFiles);
-		mapper.writeValue(comPieces.toFile(), completePieces);
+		mapper.writeValue(filePathsPath.toFile(), filePaths);
+		mapper.writeValue(fileStatusPath.toFile(), fileStatus);
+		mapper.writeValue(comletePiecesPath.toFile(), completePieces);
 		
 		if (files.containsKey(fileId)) {
 			try (FileOutputStream fout = new FileOutputStream(new File(filePaths.get(fileId)))) {
@@ -71,9 +84,9 @@ public class FilesHolder {
 	}
 
 	public void load() throws JsonGenerationException, JsonMappingException, IOException {
-		filePaths = mapper.readValue(filesPaths.toFile(), filePaths.getClass());
-		completedFiles = mapper.readValue(compFiles.toFile(), completedFiles.getClass());
-		completePieces = mapper.readValue(comPieces.toFile(), completePieces.getClass());
+		filePaths = mapper.readValue(filePathsPath.toFile(), filePaths.getClass());
+		fileStatus = mapper.readValue(fileStatusPath.toFile(), fileStatus.getClass());
+		completePieces = mapper.readValue(comletePiecesPath.toFile(), completePieces.getClass());
 
 		for (Entry<Integer, String> ent : filePaths.entrySet()) {
 			try (FileInputStream finp = new FileInputStream(new File(ent.getValue()))) {
@@ -85,7 +98,7 @@ public class FilesHolder {
 	public void deleteFile(int id) {		
 		files.remove(id);
 		filePaths.remove(id);
-		completedFiles.remove(id);
+		fileStatus.remove(id);
 		completePieces.remove(id);
 	}
 
@@ -114,7 +127,7 @@ public class FilesHolder {
 			files.put(id, finp.readAllBytes());
 		}
 		filePaths.put(id, path.toString());
-		completedFiles.add(id);
+		fileStatus.put(id, FileStatus.Complete);
 		save(-1);
 	}
 

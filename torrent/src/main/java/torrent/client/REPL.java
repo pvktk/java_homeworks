@@ -30,14 +30,22 @@ public class REPL {
 
 		for (Integer id : filesHolder.files.keySet()) {
 			out.print(id + " " + filesHolder.filePaths.get(id) + " ");
-			if (filesHolder.completedFiles.contains(id)) {
+			switch (filesHolder.fileStatus.get(id)) {
+			case Complete:
+			{
 				out.println("complete");
 				continue;
 			}
-			if (downloader.fileDownloadsFutures.containsKey(id)) {
+			case Downloading:
+			{
 				out.print("->");
-			} else {
+				break;
+			}
+			case Paused:
+			{
 				out.print("||");
+				break;
+			}
 			}
 			out.println(filesHolder.completePieces.get(id).size() + " / "
 					+ filesHolder.numParts(id));
@@ -74,25 +82,48 @@ public class REPL {
 			out.println(e.getMessage());
 		}
 	}
-	
+
 	void listAvaliableFiles() {
 		try {
 			ServerFilesLister.list(toServer, listedFilesSize, listedFilesName);
-			
+
 			for (int id : listedFilesName.keySet()) {
 				out.print(id + " " + listedFilesName.get(id));
-				if (filesHolder.files.containsKey(id)) {
-					if (filesHolder.completedFiles.contains(id)) {
-						out.println("downloaded");
-					} else if (downloader.fileDownloadsFutures.containsKey(id))
+				switch (filesHolder.fileStatus.get(id)) {
+				case Complete:
+				{
+					out.println("complete");
+					continue;
+				}
+				case Downloading:
+				{
+					out.print("->");
+					break;
+				}
+				case Paused:
+				{
+					out.print("||");
+					break;
+				}
 				}
 			}
-			
+
 		} catch (IOException e) {
 			out.println("Failed to list avaliable files");
 			out.println(e.getMessage());
 		}
 	}
+	
+	final String helpMessage = 
+			"This is torrent client.\n"
+			+ "commands:\n"
+			+ "list\n"
+			+ "publish <filepath>\n"
+			+ "delete <id>\n"
+			+ "get <id> <savePath>\n"
+			+ "pause <id>\n"
+			+ "status\n"
+			+ "help";
 	
 	public void startRepl() {
 		/*
@@ -111,9 +142,13 @@ public class REPL {
 				try {
 					System.out.print(">");
 					switch (in.next()) {
+					case "help":
+					{
+						out.println(helpMessage);
+					}
 					case "list":
 					{
-						
+						listAvaliableFiles();
 					}
 					break;
 					case "publish":

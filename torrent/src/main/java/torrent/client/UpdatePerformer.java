@@ -4,8 +4,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
-import torrent.common.StorageManager;
-
 public class UpdatePerformer implements Runnable {
 
 	private Socket toServer;

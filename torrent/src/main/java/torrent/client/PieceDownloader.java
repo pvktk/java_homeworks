@@ -6,8 +6,6 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.Set;
 
-import torrent.common.StorageManager;
-
 public class PieceDownloader implements CompletionHandler<Integer, AsynchronousSocketChannel> {
 	private int fileId;
 	private int pieceOffset, pieceLength;
@@ -21,14 +19,10 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 		this.fileId = fileId;
 
 		this.pieceIdx = pieceIdx;
-		int piece_size = filesDownloader.filesHolder.pieceSize;
+		filesDownloader.filesHolder.files.get(fileId);
 
-		int file_length = filesDownloader.filesHolder.files.get(fileId).length;
-
-		this.pieceOffset = pieceIdx * piece_size;
-		this.pieceLength = (pieceIdx + 1) * piece_size >= file_length
-				? piece_size
-						: (pieceIdx + 1) * piece_size - file_length;
+		this.pieceOffset = filesDownloader.filesHolder.pieceOffset(fileId, pieceIdx);
+		this.pieceLength = filesDownloader.filesHolder.pieceLenght(fileId, pieceIdx);
 
 		buffer = ByteBuffer.wrap(filesDownloader.filesHolder.files.get(fileId), pieceOffset, pieceLength);
 	}

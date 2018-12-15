@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import torrent.client.FilesHolder.FileStatus;
+
 public class SingleFileDownloader implements Runnable {
 
 	private SocketAddress srvAddr;
@@ -127,7 +129,7 @@ public class SingleFileDownloader implements Runnable {
 			return false;
 		}
 		try {
-			filesHolder.completedFiles.add(fileId);
+			filesHolder.fileStatus.put(fileId, FileStatus.Complete);
 			filesHolder.save();
 		} catch (IOException e){
 			e.printStackTrace();
@@ -147,25 +149,24 @@ public class SingleFileDownloader implements Runnable {
 
 	@Override
 	public void  run() {
-		while (true) {
-			if (checkIfComplete()) {
-				closeAllChannels();
-				return;
-			}
-			updateFileSources();
-			updatePieceSources();
-			dispatchPieceDownloaders();
+		try {
+			while (true) {
+				if (checkIfComplete()) {
+					return;
+				}
 
-			if (filesHolder.completedFiles.contains(fileId)) {
-				break;
-			}
+				updateFileSources();
+				updatePieceSources();
+				dispatchPieceDownloaders();
 
-			try {
-				Thread.sleep(10000);
-			} catch (InterruptedException e) {
-				closeAllChannels();
-				return;
+				try {
+					Thread.sleep(10000);
+				} catch (InterruptedException e) {
+					return;
+				}
 			}
+		} finally {
+			closeAllChannels();
 		}
 	}
 }

@@ -13,11 +13,10 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import torrent.common.ConcreteTaskHandler;
 import torrent.common.RequestCompletionHandler;
 import torrent.common.ServerRequestHandler;
-import torrent.common.StorageManager;
 
 public class Main {
 	public static void main(String[] args) throws IOException, InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
-		StorageManager<ServerData> storageManager = new StorageManager<>(ServerData.class, "serverFile");
+		StorageManager storageManager = new StorageManager("serverFile");
 		
 		AsynchronousServerSocketChannel srvChannel = AsynchronousServerSocketChannel.open();
 		srvChannel.bind(new InetSocketAddress(8081));
@@ -37,9 +36,7 @@ public class Main {
 				cleanThread.interrupt();
 				System.out.println("Saving server state...");
 				try {
-					storageManager.lock.writeLock().lock();
 					storageManager.save();
-					storageManager.lock.writeLock().unlock();
 				} catch (JsonGenerationException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

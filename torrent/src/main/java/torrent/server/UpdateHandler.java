@@ -6,20 +6,17 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import torrent.common.AbstractConcreteTaskHandler;
 import torrent.common.FileInformation;
 import torrent.common.ServerRequestHandler.MessageProcessStatus;
-import torrent.common.StorageManager;
 
-public class UpdateHandler extends AbstractConcreteTaskHandler<ServerData> {
+public class UpdateHandler extends AbstractServerTaskHandler {
 
-	public UpdateHandler(StorageManager<ServerData> stm) {
+	public UpdateHandler(StorageManager stm) {
 		super(stm);
 	}
 
 	@Override
 	public MessageProcessStatus computeResult(DataInputStream in, DataOutputStream out, InetSocketAddress clientInf) {
-		storage.lock.writeLock().lock();
 		try {
 			short clientPort = in.readShort();
 			int count = in.readInt();
@@ -46,8 +43,6 @@ public class UpdateHandler extends AbstractConcreteTaskHandler<ServerData> {
 				out.writeBoolean(false);
 			} catch (IOException e1) {}
 			return MessageProcessStatus.ERROR;
-		} finally {
-			storage.lock.writeLock().unlock();
 		}
 		
 		return MessageProcessStatus.SUCCESS;

@@ -1,13 +1,13 @@
 package torrent.server;
 
 import java.net.InetSocketAddress;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import torrent.common.FileInformation;
 
 public class ServerData {
 	public int filesCount = 0;
-	public Map<Integer, FileInformation> map = new HashMap<>();
-	public Map<InetSocketAddress, Long> lastClientUpdate = new HashMap<>();
+	public Map<Integer, FileInformation> map = new ConcurrentHashMap<>();
+	public Map<InetSocketAddress, Long> lastClientUpdate = new ConcurrentHashMap<>();
 }
