@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.Set;
 
 public class PieceDownloader implements CompletionHandler<Integer, AsynchronousSocketChannel> {
 	private int fileId;

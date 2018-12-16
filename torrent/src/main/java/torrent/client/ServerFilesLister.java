@@ -9,11 +9,14 @@ import java.util.Map;
 
 public class ServerFilesLister {
 	public static void list(SocketAddress addr, Map<Integer, Long> fileSizes, Map<Integer, String> filesNames) throws IOException {
-		try (
-				Socket s = new Socket();
-				DataOutputStream dout = new DataOutputStream(s.getOutputStream());
-				DataInputStream dinp = new DataInputStream(s.getInputStream()))
-		{
+		Socket s = null;
+		DataOutputStream dout = null;
+		DataInputStream dinp = null;
+		try {
+			s = new Socket();
+			dout = new DataOutputStream(s.getOutputStream());
+			dinp = new DataInputStream(s.getInputStream());
+					
 			s.connect(addr);
 			dout.writeByte(1);
 			
@@ -30,6 +33,10 @@ public class ServerFilesLister {
 				fileSizes.put(id, size);
 				filesNames.put(id, name);
 			}
+		} finally {
+			dinp.close();
+			dout.close();
+			s.close();
 		}
 	}
 }

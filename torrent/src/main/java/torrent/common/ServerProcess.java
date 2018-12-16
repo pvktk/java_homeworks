@@ -1,4 +1,4 @@
-package torrent.client;
+package torrent.common;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -6,19 +6,16 @@ import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.ExecutionException;
 
-import torrent.common.ConcreteTaskHandler;
-import torrent.common.RequestCompletionHandler;
-import torrent.common.ServerRequestHandler;
-
 public class ServerProcess implements Runnable {
 	
-	final static int myPort = 8082;
+	final int myPort;
 	
 	private final AsynchronousServerSocketChannel srvChannel = AsynchronousServerSocketChannel.open();
 	
 	private final ConcreteTaskHandler[] concreteHandlers;
 	
-	ServerProcess(ConcreteTaskHandler[] concreteHandlers) throws IOException {
+	public ServerProcess(int port, ConcreteTaskHandler[] concreteHandlers) throws IOException {
+		myPort = port;
 		this.concreteHandlers = concreteHandlers;
 		srvChannel.bind(new InetSocketAddress(myPort));
 	}

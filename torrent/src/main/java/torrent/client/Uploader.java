@@ -10,11 +10,14 @@ import java.nio.file.Paths;
 
 public class Uploader {
 	public static int uploadAndGetId(SocketAddress addr, String filePath) throws IOException {
-		try (
-				Socket s = new Socket();
-				DataOutputStream dout = new DataOutputStream(s.getOutputStream());
-				DataInputStream dinp = new DataInputStream(s.getInputStream())
-		) {
+		Socket s = null;
+		DataOutputStream dout = null;
+		DataInputStream dinp = null;
+		try {
+			s = new Socket();
+			dout = new DataOutputStream(s.getOutputStream());
+			dinp = new DataInputStream(s.getInputStream());
+					
 			s.connect(addr, 10000);
 			if (!Files.isRegularFile(Paths.get(filePath))) {
 				return -1;
@@ -25,6 +28,10 @@ public class Uploader {
 			dout.writeLong(len);
 			
 			return dinp.readInt();
+		} finally {
+			dinp.close();
+			dout.close();
+			s.close();
 		}
 	}
 }

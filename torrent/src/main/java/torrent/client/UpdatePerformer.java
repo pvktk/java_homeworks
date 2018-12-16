@@ -3,14 +3,15 @@ package torrent.client;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketAddress;
 
 public class UpdatePerformer implements Runnable {
 
-	private Socket toServer;
+	private SocketAddress toServer;
 	private FilesHolder filesHolder;
-	private short myPort;
+	private int myPort;
 
-	public UpdatePerformer(FilesHolder filesHolder, Socket toServer, short myPort) {
+	public UpdatePerformer(FilesHolder filesHolder, SocketAddress toServer, int myPort) {
 		this.filesHolder = filesHolder;
 		this.toServer = toServer;
 		this.myPort = myPort;
@@ -20,25 +21,30 @@ public class UpdatePerformer implements Runnable {
 	public void run() {
 
 		while(true) {
-			
-			DataOutputStream out;
+			Socket s = null;
+			DataOutputStream out = null;
 			try {
-				out = new DataOutputStream(toServer.getOutputStream());
+				s = new Socket();
+				s.connect(toServer);
+				out = new DataOutputStream(s.getOutputStream());
+
 				out.writeByte(4);
 				out.writeShort(myPort);
-			} catch (IOException e) {
-				System.out.println("UpdatePerformer: creation of DataOutputStream failed");
-				continue;
-			}
 
-			try {
 				out.writeInt(filesHolder.completePieces.size());
 				for (Integer fileId : filesHolder.completePieces.keySet()) {
 					out.writeInt(fileId);
 				}
-			} catch (IOException e) {
-				System.out.println("UpdatePerformer failed");
-				continue;
+
+			} catch (IOException e1) {
+				System.out.println("\nUpdate to server failed");
+			} finally {
+				try {
+					out.close();
+					s.close();
+				} catch (Exception e) {
+				}
+
 			}
 			
 			try {
@@ -48,5 +54,5 @@ public class UpdatePerformer implements Runnable {
 			}
 		}
 	}
-
 }
+

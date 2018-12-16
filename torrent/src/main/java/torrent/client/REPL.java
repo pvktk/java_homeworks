@@ -2,6 +2,7 @@ package torrent.client;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.SocketAddress;
 import java.nio.file.Paths;
@@ -18,12 +19,20 @@ public class REPL {
 	private Map<Integer, String> listedFilesName = new HashMap<>();
 
 	private SocketAddress toServer;
-	PrintStream out = System.out;
+	private final PrintStream out;
+	private final InputStream inStream;
 
-	public REPL(FilesHolder filesHolder, FilesDownloader downloader, SocketAddress toServer) {
+	public REPL(
+			FilesHolder filesHolder,
+			FilesDownloader downloader,
+			SocketAddress toServer,
+			PrintStream out,
+			InputStream inStream) {
 		this.filesHolder = filesHolder;
 		this.downloader = downloader;
 		this.toServer = toServer;
+		this.out = out;
+		this.inStream = inStream;
 	}
 
 	void printStatus() {
@@ -113,18 +122,18 @@ public class REPL {
 			out.println(e.getMessage());
 		}
 	}
-	
+
 	final String helpMessage = 
 			"This is torrent client.\n"
-			+ "commands:\n"
-			+ "list\n"
-			+ "publish <filepath>\n"
-			+ "delete <id>\n"
-			+ "get <id> <savePath>\n"
-			+ "pause <id>\n"
-			+ "status\n"
-			+ "help";
-	
+					+ "commands:\n"
+					+ "list\n"
+					+ "publish <filepath>\n"
+					+ "delete <id>\n"
+					+ "get <id> <savePath>\n"
+					+ "pause <id>\n"
+					+ "status\n"
+					+ "help";
+
 	public void startRepl() {
 		/*
 		Options options = new Options();
@@ -137,11 +146,12 @@ public class REPL {
 		options.addOption("status", true, "list files known by your client and their status");
 		 */
 
-		try (Scanner in = new Scanner(System.in)) {
+		try (Scanner in = new Scanner(inStream)) {
 			while (true) {
 				try {
-					System.out.print(">");
-					switch (in.next()) {
+					out.print(">");
+					String command = in.next();
+					switch (command) {
 					case "help":
 					{
 						out.println(helpMessage);
@@ -176,6 +186,11 @@ public class REPL {
 						printStatus();
 					}
 					break;
+
+					default:
+					{
+						out.println("unknown command " + command);
+					}
 					}
 				} catch (Exception e) {
 					out.println(e.getMessage());
