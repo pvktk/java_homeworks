@@ -28,11 +28,13 @@ public class UpdateHandler extends AbstractServerTaskHandler {
 				FileInformation fInf = storage.data.map.get(id);
 
 				if (fInf == null) {
-					return MessageProcessStatus.ERROR;
+					out.writeBoolean(false);
+					return MessageProcessStatus.SUCCESS;
 				}
 
 				fInf.clients.add(clientAddr);
 				storage.data.lastClientUpdate.put(clientAddr, System.currentTimeMillis());
+				System.out.println("Update handler: " + clientAddr + " added");
 			}
 			storage.save();
 			out.writeBoolean(true);

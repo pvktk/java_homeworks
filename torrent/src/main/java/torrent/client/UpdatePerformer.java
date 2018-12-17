@@ -9,7 +9,7 @@ public class UpdatePerformer implements Runnable {
 
 	private SocketAddress toServer;
 	private FilesHolder filesHolder;
-	private int myPort;
+	private final int myPort;
 
 	public UpdatePerformer(FilesHolder filesHolder, SocketAddress toServer, int myPort) {
 		this.filesHolder = filesHolder;

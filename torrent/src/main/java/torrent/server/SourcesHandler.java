@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.HashSet;
 import java.util.Set;
 
 import torrent.common.ServerRequestHandler.MessageProcessStatus;
@@ -21,10 +22,11 @@ public class SourcesHandler extends AbstractServerTaskHandler {
 			int id = in.readInt();
 
 			if (!storage.data.map.containsKey(id)) {
-				return MessageProcessStatus.ERROR;
+				out.writeInt(0);
+				return MessageProcessStatus.SUCCESS;
 			}
 
-			Set<InetSocketAddress> clients = storage.data.map.get(id).clients;
+			Set<InetSocketAddress> clients = new HashSet<>(storage.data.map.get(id).clients);
 
 			out.writeInt(clients.size());
 

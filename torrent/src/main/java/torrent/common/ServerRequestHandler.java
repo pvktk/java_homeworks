@@ -43,7 +43,8 @@ public class ServerRequestHandler{
 				return MessageProcessStatus.INCOMPLETE;
 			}
 
-			if (typeIndex > handlers.length) {
+			if (typeIndex > handlers.length || typeIndex < 1) {
+				System.out.println("Operation index is bad");
 				return MessageProcessStatus.ERROR;
 			}
 

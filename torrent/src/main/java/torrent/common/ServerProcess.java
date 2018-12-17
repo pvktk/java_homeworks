@@ -35,8 +35,12 @@ public class ServerProcess implements Runnable {
 			
 			ServerRequestHandler handler = new ServerRequestHandler(concreteHandlers);
 			
+			try {
 			clientChannel.read(handler.getReceivingBuffer(), handler,
 					new RequestCompletionHandler(clientChannel));
+			} catch (Exception e) {
+				System.out.println("Server: Exception while reading from channel.");
+			}
 		}
 
 	}

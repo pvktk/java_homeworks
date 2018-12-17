@@ -2,12 +2,13 @@ package torrent.server;
 
 public class OldClientsCleaner implements Runnable {
 
-	public final long updateTime = 5 * 60 * 1000;
+	public final long updateTime;// = 5 * 60 * 1000;
 
 	private StorageManager storage;
 
-	public OldClientsCleaner(StorageManager storage) {
+	public OldClientsCleaner(StorageManager storage, long updateTimeMillis) {
 		this.storage = storage;
+		updateTime = updateTimeMillis;
 	}
 
 	@Override
@@ -18,7 +19,9 @@ public class OldClientsCleaner implements Runnable {
 			} catch (InterruptedException e) {
 				return;
 			}
-
+			
+			System.out.println("Cleaner loop");
+			
 			long currTime = System.currentTimeMillis();
 
 			storage.data.lastClientUpdate
@@ -26,7 +29,13 @@ public class OldClientsCleaner implements Runnable {
 			.removeIf(ent -> currTime - ent.getValue() > updateTime);
 
 			storage.data.map.values().stream().forEach(fInf ->
-			fInf.clients.removeIf(s -> !storage.data.lastClientUpdate.containsKey(s)));
+			fInf.clients.removeIf(s -> {
+				boolean res = !storage.data.lastClientUpdate.containsKey(s);
+				if (res) {
+					System.out.println("ServerCleaner: removing " + s);
+				}
+				return res;
+				}));
 
 			try {
 				storage.save();

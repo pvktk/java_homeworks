@@ -23,7 +23,7 @@ public class UploadHandler extends AbstractServerTaskHandler {
 			long size = in.readLong();
 			
 			int id = storage.data.filesCount++;
-			storage.data.map.put(id, new FileInformation(id, name, size, Arrays.asList(clientInf)));
+			storage.data.map.put(id, new FileInformation(id, name, size, Arrays.asList()));
 			storage.save();
 			out.writeInt(id);
 		} catch (EOFException e) {
