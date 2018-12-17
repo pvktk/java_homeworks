@@ -27,6 +27,11 @@ public class ServerProcess implements Runnable {
 			try {
 				clientChannel = srvChannel.accept().get();
 			} catch (InterruptedException e) {
+				try {
+					srvChannel.close();
+				} catch (IOException e1) {
+					System.out.println("Exception while closing srvChannel " + e1.getMessage());;
+				}
 				return;
 			} catch (ExecutionException e) {
 				// TODO Auto-generated catch block

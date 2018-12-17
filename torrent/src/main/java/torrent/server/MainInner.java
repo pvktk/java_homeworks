@@ -6,13 +6,13 @@ import torrent.common.ConcreteTaskHandler;
 import torrent.common.ServerProcess;
 
 public class MainInner implements Runnable {
-	
+
 	private final long updateMillis;
-	
+
 	public MainInner (long updateMillis) {
 		this.updateMillis = updateMillis;
 	}
-	
+
 	@Override
 	public void run() {
 		StorageManager storageManager = null;
@@ -45,8 +45,8 @@ public class MainInner implements Runnable {
 			System.out.println("Saving server state...");
 			try {
 				cleanThread.interrupt();
-				cleanThread.join();
 				srvThread.interrupt();
+				cleanThread.join();
 				srvThread.join();
 				storageManager.save();
 			} catch (IOException e1) {
