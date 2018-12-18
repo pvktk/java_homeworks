@@ -22,7 +22,6 @@ public class ServerRequestHandler{
 	}
 
 	public ByteBuffer getReceivingBuffer() {
-		inputBuffer.clear();
 		return inputBuffer;
 	}
 
@@ -30,8 +29,8 @@ public class ServerRequestHandler{
 		try (
 				DataInputStream dInp = new DataInputStream(
 						new ByteArrayInputStream(inputBuffer.array(),
-								inputBuffer.arrayOffset(), 
-								inputBuffer.limit() - inputBuffer.position()));
+								0, 
+								inputBuffer.position()));
 
 				ByteArrayOutputStream bout = new ByteArrayOutputStream();
 				DataOutputStream dOut = new DataOutputStream(bout);
