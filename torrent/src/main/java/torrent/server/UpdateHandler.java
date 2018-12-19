@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.ConcurrentHashMap;
 
 import torrent.common.FileInformation;
 import torrent.common.ServerRequestHandler.MessageProcessStatus;
@@ -31,9 +32,13 @@ public class UpdateHandler extends AbstractServerTaskHandler {
 					out.writeBoolean(false);
 					return MessageProcessStatus.SUCCESS;
 				}
-
-				fInf.clients.add(clientAddr);
-				storage.data.lastClientUpdate.put(clientAddr, System.currentTimeMillis());
+				
+				if (!storage.clients.containsKey(id)) {
+					new ConcurrentHashMap<>();
+					storage.clients.put(id, ConcurrentHashMap.newKeySet());
+				}
+				storage.clients.get(id).add(clientAddr);
+				storage.lastClientUpdate.put(clientAddr, System.currentTimeMillis());
 				System.out.println("Update handler: " + clientAddr + " added");
 			}
 			storage.save();

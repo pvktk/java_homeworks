@@ -9,13 +9,14 @@ public class FileInformation {
 	public int id;
 	public String name;
 	public long size;
-	public Set<InetSocketAddress> clients;
+	//public Set<InetSocketAddress> clients;
 	
-	public FileInformation(int id2, String name2, long size2, List<InetSocketAddress> clients2) {
+	public FileInformation() {};
+	public FileInformation(int id2, String name2, long size2) {
 		id = id2;
 		name = name2;
 		size = size2;
-		clients = new HashSet<>();
-		clients.addAll(clients2);
+		//clients = new HashSet<>();
+		//clients.addAll(clients2);
 	}
 }

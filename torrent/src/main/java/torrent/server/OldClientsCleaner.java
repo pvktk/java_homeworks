@@ -24,13 +24,13 @@ public class OldClientsCleaner implements Runnable {
 			
 			long currTime = System.currentTimeMillis();
 
-			storage.data.lastClientUpdate
+			storage.lastClientUpdate
 			.entrySet()
 			.removeIf(ent -> currTime - ent.getValue() > updateTime);
 
-			storage.data.map.values().stream().forEach(fInf ->
-			fInf.clients.removeIf(s -> {
-				boolean res = !storage.data.lastClientUpdate.containsKey(s);
+			storage.clients.values().forEach(set ->
+			set.removeIf(s -> {
+				boolean res = !storage.lastClientUpdate.containsKey(s);
 				if (res) {
 					System.out.println("ServerCleaner: removing " + s);
 				}

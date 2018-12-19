@@ -52,7 +52,7 @@ public class RequestCompletionHandler implements CompletionHandler<Integer, Serv
 		if (status == MessageProcessStatus.INCOMPLETE){
 			clientChannel.read(handler.getReceivingBuffer(), handler, this);
 		}
-		
+
 		if (status == MessageProcessStatus.ERROR) {
 			try {
 				clientChannel.close();
