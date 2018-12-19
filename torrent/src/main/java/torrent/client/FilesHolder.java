@@ -31,10 +31,10 @@ public class FilesHolder {
 	//
 
 	ObjectMapper mapper = new ObjectMapper();
-	private final Path mapPath = Paths.get("torrentData");
-	private final Path filePathsPath = mapPath.resolve("filepaths");
-	private final Path fileStatusPath = mapPath.resolve("filesStatus");
-	private final Path comletePiecesPath = mapPath.resolve("completePieces");
+	private final Path mapPath;
+	private final Path filePathsPath;
+	private final Path fileStatusPath;
+	private final Path comletePiecesPath;
 
 	public int numParts(int fileId) {
 		return (files.get(fileId).length + pieceSize - 1) / pieceSize;
@@ -51,13 +51,17 @@ public class FilesHolder {
 						: (numPart + 1) * pieceSize - file_length;
 	}
 
-	public FilesHolder() throws IOException {
+	public FilesHolder(String path) throws IOException {
+		mapPath = Paths.get(path);
+		filePathsPath = mapPath.resolve("filepaths");
+		fileStatusPath = mapPath.resolve("filesStatus");
+		comletePiecesPath = mapPath.resolve("completePieces");
 		load();
 	}
-	
+
 	private void writeMaps() throws IOException {
 		Files.createDirectory(mapPath);
-		
+
 		filePathsPath.toFile().createNewFile();
 		mapper.writeValue(filePathsPath.toFile(), filePaths);
 
@@ -67,7 +71,7 @@ public class FilesHolder {
 		comletePiecesPath.toFile().createNewFile();
 		mapper.writeValue(comletePiecesPath.toFile(), completePieces);
 	}
-	
+
 	public void save() throws JsonGenerationException, JsonMappingException, IOException {
 
 		writeMaps();
@@ -80,7 +84,7 @@ public class FilesHolder {
 	}
 
 	public void save(int fileId) throws FileNotFoundException, IOException {
-		
+
 		writeMaps();
 
 		if (files.containsKey(fileId)) {
@@ -97,12 +101,12 @@ public class FilesHolder {
 			fileStatus = mapper.readValue(fileStatusPath.toFile(), fileStatus.getClass());
 		if (comletePiecesPath.toFile().exists())
 			completePieces = mapper.readValue(comletePiecesPath.toFile(), completePieces.getClass());
-		
+
 		if (!filePaths.keySet().equals(fileStatus.keySet())
 				|| !filePaths.keySet().equals(completePieces.keySet())) {
 			throw new RuntimeException("maps key sets not equal");
 		}
-		
+
 		for (Entry<Integer, String> ent : filePaths.entrySet()) {
 			try (FileInputStream finp = new FileInputStream(new File(ent.getValue()))) {
 				files.put(ent.getKey(), finp.readAllBytes());
@@ -110,7 +114,10 @@ public class FilesHolder {
 		}
 	}
 
-	public void deleteFile(int id) {		
+	public void deleteFile(int id) {
+		if (! files.containsKey(id)) {
+			throw new NullPointerException("File isn't known.");
+		}
 		files.remove(id);
 		filePaths.remove(id);
 		fileStatus.remove(id);

@@ -5,8 +5,6 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
-
 import torrent.common.FileInformation;
 import torrent.common.ServerRequestHandler.MessageProcessStatus;
 

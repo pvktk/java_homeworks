@@ -10,11 +10,13 @@ public class UpdatePerformer implements Runnable {
 	private SocketAddress toServer;
 	private FilesHolder filesHolder;
 	private final int myPort;
-
-	public UpdatePerformer(FilesHolder filesHolder, SocketAddress toServer, int myPort) {
+	
+	private final long updateTime;
+	public UpdatePerformer(FilesHolder filesHolder, SocketAddress toServer, int myPort, long updateTime) {
 		this.filesHolder = filesHolder;
 		this.toServer = toServer;
 		this.myPort = myPort;
+		this.updateTime = updateTime;
 	}
 
 	@Override
@@ -48,7 +50,7 @@ public class UpdatePerformer implements Runnable {
 			}
 			
 			try {
-				Thread.sleep(10000);
+				Thread.sleep(updateTime);
 			} catch (InterruptedException e) {
 				return;
 			}

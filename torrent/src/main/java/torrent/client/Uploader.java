@@ -15,10 +15,12 @@ public class Uploader {
 		DataInputStream dinp = null;
 		try {
 			s = new Socket();
+			
+			s.connect(addr);
+			
 			dout = new DataOutputStream(s.getOutputStream());
 			dinp = new DataInputStream(s.getInputStream());
-					
-			s.connect(addr, 10000);
+
 			if (!Files.isRegularFile(Paths.get(filePath))) {
 				return -1;
 			}
@@ -26,12 +28,16 @@ public class Uploader {
 			dout.writeByte(2);
 			dout.writeUTF(Paths.get(filePath).getFileName().toString());
 			dout.writeLong(len);
-			
+
 			return dinp.readInt();
 		} finally {
-			dinp.close();
-			dout.close();
-			s.close();
+			try {
+				dinp.close();
+				dout.close();
+				s.close();
+			} catch (NullPointerException npe) {
+				throw new IOException("Failed to connect to server");
+			}
 		}
 	}
 }

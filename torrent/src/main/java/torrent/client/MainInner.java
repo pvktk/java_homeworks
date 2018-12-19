@@ -16,21 +16,23 @@ public class MainInner implements Runnable {
 	private final String host;
 	private final PrintStream out;
 	private final InputStream sinp;
-
-	public MainInner(String host, PrintStream out, InputStream sinp) {
+	private final long updateTime;
+	private final FilesHolder filesHolder;
+	private final int myport;
+	
+	public MainInner(String host, int port, PrintStream out, InputStream sinp, long updateTime, FilesHolder fh) {
 		this.host = host;
 		this.out = out;
 		this.sinp = sinp;
+		this.updateTime = updateTime;
+		this.filesHolder = fh;
+		this.myport = port;
 	}
 
 	@Override
 	public void run() {
-		FilesHolder filesHolder = null;
 		try {
-			final int myport = 8082;
 			final SocketAddress toServer = new InetSocketAddress(host, 8081);
-
-			filesHolder = new FilesHolder();
 
 			ExecutorService exec = Executors.newFixedThreadPool(3);
 			exec.execute(new ServerProcess(
@@ -40,7 +42,7 @@ public class MainInner implements Runnable {
 							new GetHandler(filesHolder)
 					}));
 
-			exec.execute(new UpdatePerformer(filesHolder, toServer, myport));
+			exec.execute(new UpdatePerformer(filesHolder, toServer, myport, updateTime));
 
 			REPL repl = new REPL(
 					filesHolder,

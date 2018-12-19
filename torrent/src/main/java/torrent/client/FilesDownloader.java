@@ -36,6 +36,10 @@ public class FilesDownloader {
 	}
 	
 	public void stopFileDownload(int fileId) {
+		if (!filesHolder.fileStatus.containsKey(fileId)) {
+			throw new NullPointerException("This file wasn't been downloading");
+		}
+		
 		if (filesHolder.fileStatus.get(fileId) != FileStatus.Downloading) {
 			return;
 		}

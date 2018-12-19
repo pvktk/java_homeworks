@@ -37,6 +37,10 @@ public class REPL {
 
 	void printStatus() {
 
+		if (filesHolder.files.isEmpty()) {
+			out.println("No files yet");
+		}
+
 		for (Integer id : filesHolder.files.keySet()) {
 			out.print(id + " " + filesHolder.filePaths.get(id) + " ");
 			switch (filesHolder.fileStatus.get(id)) {
@@ -64,7 +68,7 @@ public class REPL {
 	void startDownload(int id, String filename) throws FileNotFoundException, FileProblemException, IOException {
 		Long size = listedFilesSize.get(id);
 		if (size == null) {
-			out.println("Unknown file size. Make list first.");
+			out.println("Unknown file id. Make list first.");
 			return;
 		}
 		filesHolder.addFileToDownload(id, size, filename);
@@ -72,11 +76,14 @@ public class REPL {
 	}
 
 	void deleteFile(int id) {
-		downloader.stopFileDownload(id);
+		try {
+			downloader.stopFileDownload(id);
+		} catch (NullPointerException e) {}
+
 		filesHolder.deleteFile(id);
 	}
 
-	void publishFile(String pathTo) {
+	void publishFile(String pathTo) throws FileProblemException {
 		try {
 			int id = Uploader.uploadAndGetId(toServer, pathTo);
 			if (id == 1) {
@@ -85,10 +92,11 @@ public class REPL {
 			}
 
 			filesHolder.addExistingFile(id, Paths.get(pathTo));
+		}	catch (FileNotFoundException e) {
+			out.println("Failed to publish file.\n" +
+					pathTo + " not found.");
 		} catch (IOException e) {
-			out.println(e.getMessage());
-		} catch (FileProblemException e) {
-			out.println(e.getMessage());
+			out.println("Failed to publish file.\n" + e.getMessage());
 		}
 	}
 
@@ -96,6 +104,9 @@ public class REPL {
 		try {
 			ServerFilesLister.list(toServer, listedFilesSize, listedFilesName);
 
+			if (listedFilesName.isEmpty()) {
+				out.println("No files avaliable on server");
+			}
 			for (int id : listedFilesName.keySet()) {
 				out.print(id + " " + listedFilesName.get(id));
 				switch (filesHolder.fileStatus.get(id)) {
@@ -118,8 +129,7 @@ public class REPL {
 			}
 
 		} catch (IOException e) {
-			out.println("Failed to list avaliable files");
-			out.println(e.getMessage());
+			out.println("Failed to list avaliable files.\n" + e.getMessage());
 		}
 	}
 
@@ -192,7 +202,7 @@ public class REPL {
 						out.println("unknown command " + command);
 					}
 					}
-				} catch (Exception e) {
+				} catch (IOException | FileProblemException | NullPointerException e) {
 					out.println(e.getMessage());
 				}
 			}

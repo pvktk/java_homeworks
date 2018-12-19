@@ -14,29 +14,33 @@ public class ServerFilesLister {
 		DataInputStream dinp = null;
 		try {
 			s = new Socket();
+			s.connect(addr);
 			dout = new DataOutputStream(s.getOutputStream());
 			dinp = new DataInputStream(s.getInputStream());
-					
-			s.connect(addr);
+
 			dout.writeByte(1);
-			
+
 			fileSizes.clear();
 			filesNames.clear();
-			
+
 			int count = dinp.readInt();
-			
+
 			for (int i = 0; i < count; i++) {
 				int id = dinp.readInt();
 				String name = dinp.readUTF();
 				long size = dinp.readLong();
-				
+
 				fileSizes.put(id, size);
 				filesNames.put(id, name);
 			}
 		} finally {
-			dinp.close();
-			dout.close();
-			s.close();
+			try {
+				dinp.close();
+				dout.close();
+				s.close();
+			} catch (NullPointerException npe) {
+				throw new IOException("Failed to connect to server");
+			}
 		}
 	}
 }
