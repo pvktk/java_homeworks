@@ -1,5 +1,6 @@
 package torrent.client;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -7,12 +8,14 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
 import torrent.client.FilesHolder.FileStatus;
 
@@ -92,7 +95,30 @@ public class SingleFileDownloader implements Runnable {
 		}
 	}
 
-	private void dispatchPieceDownloaders() {
+
+	private boolean getRequest(AsynchronousSocketChannel chan, int fileId, int partNum) throws IOException, InterruptedException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		DataOutputStream dout = new DataOutputStream(baos);
+
+		dout.writeByte(2);
+		dout.writeInt(fileId);
+		dout.writeInt(partNum);
+		
+		dout.close();
+		ByteBuffer bb = ByteBuffer.wrap(baos.toByteArray());
+		
+		do {
+			try {
+				chan.write(bb).get();
+			} catch (ExecutionException e) {
+				e.printStackTrace();
+			}
+		} while (bb.hasRemaining());
+
+		return true;
+	}
+
+	private void dispatchPieceDownloaders() throws InterruptedException {
 		for (int i = 0; i < numPieces; i++) {
 			if (filesHolder.completePieces.get(fileId).contains(i)) {
 				pieceChannels.remove(i);
@@ -116,7 +142,22 @@ public class SingleFileDownloader implements Runnable {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				chan.connect(sources.get(rIdx));
+				try {
+					chan.connect(sources.get(rIdx)).get();
+				} catch (ExecutionException e) {
+					continue;
+				} catch (InterruptedException e) {
+					return;
+				}
+				try {
+					if (!getRequest(chan, fileId, i)) {
+						System.out.println("SFD: get request failed");
+						continue;
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+					continue;
+				}
 				PieceDownloader pdl = new PieceDownloader(this, fileId, i);
 				chan.read(pdl.getBuffer(), chan, pdl);
 				pieceChannels.put(i, chan);
@@ -124,7 +165,7 @@ public class SingleFileDownloader implements Runnable {
 		}
 	}
 
-	private boolean checkIfComplete() {
+	boolean checkIfComplete() {
 		if (filesHolder.completePieces.get(fileId).size() < filesHolder.numParts(fileId)) {
 			return false;
 		}
@@ -157,9 +198,9 @@ public class SingleFileDownloader implements Runnable {
 
 				updateFileSources();
 				updatePieceSources();
-				dispatchPieceDownloaders();
-
+				
 				try {
+					dispatchPieceDownloaders();
 					Thread.sleep(10000);
 				} catch (InterruptedException e) {
 					return;

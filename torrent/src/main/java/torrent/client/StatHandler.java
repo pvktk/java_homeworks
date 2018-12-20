@@ -32,7 +32,7 @@ public class StatHandler implements ConcreteTaskHandler {
 			out.writeInt(pieces.size());
 			
 			for (int i : pieces) {
-				out.write(i);
+				out.writeInt(i);
 			}
 			
 			return MessageProcessStatus.SUCCESS;

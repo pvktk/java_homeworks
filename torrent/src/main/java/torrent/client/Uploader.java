@@ -2,6 +2,7 @@ package torrent.client;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -21,9 +22,10 @@ public class Uploader {
 			dout = new DataOutputStream(s.getOutputStream());
 			dinp = new DataInputStream(s.getInputStream());
 
-			if (!Files.isRegularFile(Paths.get(filePath))) {
-				return -1;
+			if (!Files.exists(Paths.get(filePath))) {
+				throw new FileNotFoundException();
 			}
+
 			long len = Paths.get(filePath).toFile().length();
 			dout.writeByte(2);
 			dout.writeUTF(Paths.get(filePath).getFileName().toString());

@@ -12,7 +12,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -46,9 +50,9 @@ public class FilesHolder {
 
 	public int pieceLenght(int fileId, int numPart) {
 		int file_length = files.get(fileId).length;
-		return (numPart + 1) * pieceSize >= file_length
+		return (numPart + 1) * pieceSize <= file_length
 				? pieceSize
-						: (numPart + 1) * pieceSize - file_length;
+						: file_length - numPart * pieceSize;
 	}
 
 	public FilesHolder(String path) throws IOException {
@@ -60,7 +64,8 @@ public class FilesHolder {
 	}
 
 	private void writeMaps() throws IOException {
-		Files.createDirectory(mapPath);
+		if (!Files.exists(mapPath))
+			Files.createDirectories(mapPath);
 
 		filePathsPath.toFile().createNewFile();
 		mapper.writeValue(filePathsPath.toFile(), filePaths);
@@ -96,12 +101,12 @@ public class FilesHolder {
 
 	public void load() throws JsonGenerationException, JsonMappingException, IOException {
 		if (filePathsPath.toFile().exists())
-			filePaths = mapper.readValue(filePathsPath.toFile(), filePaths.getClass());
+			filePaths = mapper.readValue(filePathsPath.toFile(), new TypeReference<Map<Integer, String>>() {});
 		if (fileStatusPath.toFile().exists())
-			fileStatus = mapper.readValue(fileStatusPath.toFile(), fileStatus.getClass());
+			fileStatus = mapper.readValue(fileStatusPath.toFile(), new TypeReference<Map<Integer, FileStatus>>() {});
 		if (comletePiecesPath.toFile().exists())
-			completePieces = mapper.readValue(comletePiecesPath.toFile(), completePieces.getClass());
-
+			completePieces = mapper.readValue(comletePiecesPath.toFile(), new TypeReference<Map<Integer, Set<Integer>>>() {});
+		
 		if (!filePaths.keySet().equals(fileStatus.keySet())
 				|| !filePaths.keySet().equals(completePieces.keySet())) {
 			throw new RuntimeException("maps key sets not equal");
@@ -110,6 +115,9 @@ public class FilesHolder {
 		for (Entry<Integer, String> ent : filePaths.entrySet()) {
 			try (FileInputStream finp = new FileInputStream(new File(ent.getValue()))) {
 				files.put(ent.getKey(), finp.readAllBytes());
+			} catch (FileNotFoundException fnfe) {
+				completePieces.get(ent.getKey()).clear();
+				fileStatus.put(ent.getKey(), FileStatus.Downloading);
 			}
 		}
 	}
@@ -134,6 +142,7 @@ public class FilesHolder {
 		files.put(id, new byte[Math.toIntExact(size)]);
 		filePaths.put(id, filePath);
 		completePieces.put(id, ConcurrentHashMap.newKeySet());
+		fileStatus.put(id, FileStatus.Paused);
 		writeMaps();
 	}
 
@@ -150,6 +159,10 @@ public class FilesHolder {
 		}
 		filePaths.put(id, path.toString());
 		fileStatus.put(id, FileStatus.Complete);
+		completePieces.put(id,
+				Stream.iterate(0, i -> i + 1)
+				.limit(numParts(id))
+				.collect(Collectors.toSet()));
 		save(-1);
 	}
 

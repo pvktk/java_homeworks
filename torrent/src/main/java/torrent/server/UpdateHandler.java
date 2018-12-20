@@ -39,7 +39,7 @@ public class UpdateHandler extends AbstractServerTaskHandler {
 				}
 				storage.clients.get(id).add(clientAddr);
 				storage.lastClientUpdate.put(clientAddr, System.currentTimeMillis());
-				System.out.println("Update handler: " + clientAddr + " added");
+				//System.out.println("Update handler: " + clientAddr + " added");
 			}
 			storage.save();
 			out.writeBoolean(true);

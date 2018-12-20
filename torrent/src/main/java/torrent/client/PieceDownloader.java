@@ -36,6 +36,7 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 			attachment.read(buffer, attachment, this);
 		} else {
 			filesDownloader.filesHolder.completePieces.get(fileId).add(pieceIdx);
+			filesDownloader.checkIfComplete();
 			try {
 				attachment.close();
 			} catch (IOException e) {
@@ -47,8 +48,7 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 
 	@Override
 	public void failed(Throwable exc, AsynchronousSocketChannel attachment) {
-		// TODO Auto-generated method stub
-
+		System.err.println("PieceDownloader failed");
 	}
 
 

@@ -19,9 +19,7 @@ public class OldClientsCleaner implements Runnable {
 			} catch (InterruptedException e) {
 				return;
 			}
-			
-			System.out.println("Cleaner loop");
-			
+
 			long currTime = System.currentTimeMillis();
 
 			storage.lastClientUpdate
@@ -30,12 +28,8 @@ public class OldClientsCleaner implements Runnable {
 
 			storage.clients.values().forEach(set ->
 			set.removeIf(s -> {
-				boolean res = !storage.lastClientUpdate.containsKey(s);
-				if (res) {
-					System.out.println("ServerCleaner: removing " + s);
-				}
-				return res;
-				}));
+				return !storage.lastClientUpdate.containsKey(s);
+			}));
 
 			try {
 				storage.save();

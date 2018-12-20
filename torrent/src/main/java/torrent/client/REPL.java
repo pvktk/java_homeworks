@@ -8,6 +8,7 @@ import java.net.SocketAddress;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 public class REPL {
@@ -60,12 +61,13 @@ public class REPL {
 				break;
 			}
 			}
-			out.println(filesHolder.completePieces.get(id).size() + " / "
+			out.println(" " + filesHolder.completePieces.get(id).size() + "/"
 					+ filesHolder.numParts(id));
 		}
 	}
 
 	void startDownload(int id, String filename) throws FileNotFoundException, FileProblemException, IOException {
+		filename = filename.trim();
 		Long size = listedFilesSize.get(id);
 		if (size == null) {
 			out.println("Unknown file id. Make list first.");
@@ -84,18 +86,18 @@ public class REPL {
 	}
 
 	void publishFile(String pathTo) throws FileProblemException {
+		pathTo = pathTo.trim();
 		try {
 			int id = Uploader.uploadAndGetId(toServer, pathTo);
-			if (id == 1) {
-				out.println("file not exist");
-				return;
-			}
 
 			filesHolder.addExistingFile(id, Paths.get(pathTo));
+			out.println("The file has an id " + id);
 		}	catch (FileNotFoundException e) {
+			//e.printStackTrace();
 			out.println("Failed to publish file.\n" +
-					pathTo + " not found.");
+					pathTo + " not exists.");
 		} catch (IOException e) {
+			//e.printStackTrace();
 			out.println("Failed to publish file.\n" + e.getMessage());
 		}
 	}
@@ -108,7 +110,11 @@ public class REPL {
 				out.println("No files avaliable on server");
 			}
 			for (int id : listedFilesName.keySet()) {
-				out.print(id + " " + listedFilesName.get(id));
+				out.print(id + " " + listedFilesName.get(id) + " ");
+				if (!filesHolder.fileStatus.containsKey(id)) {
+					out.println();
+					return;
+				}
 				switch (filesHolder.fileStatus.get(id)) {
 				case Complete:
 				{
@@ -204,6 +210,8 @@ public class REPL {
 					}
 				} catch (IOException | FileProblemException | NullPointerException e) {
 					out.println(e.getMessage());
+				} catch (NoSuchElementException e) {
+					return;
 				}
 			}
 		}

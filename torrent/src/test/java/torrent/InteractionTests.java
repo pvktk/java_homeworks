@@ -12,6 +12,7 @@ import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Random;
 
@@ -33,6 +34,7 @@ public class InteractionTests {
 	PrintWriter[] inp = new PrintWriter[ncl];
 	ByteArrayOutputStream[] outp = new ByteArrayOutputStream[ncl];
 	FilesHolder[] fh = new FilesHolder[ncl];
+	Path root[] = new Path[ncl];
 	
 	String getOutput(int i) throws InterruptedException {
 		Thread.sleep(1000);
@@ -56,7 +58,8 @@ public class InteractionTests {
 		outp[i] = new ByteArrayOutputStream();
 		PipedInputStream pin = new PipedInputStream();
 		inp[i] = new PrintWriter(new PipedOutputStream(pin));
-		fh[i] = new FilesHolder("torrentData/client" + i);
+		root[i] = Paths.get("torrentData/client" + i);
+		fh[i] = new FilesHolder(root[i].toString());
 		cl[i] = new Thread(new torrent.client.MainInner("localhost", 8090 + i,
 				new PrintStream(outp[i]),
 				pin,
@@ -69,8 +72,8 @@ public class InteractionTests {
 		Random r = new Random(5);
 		r.nextBytes(arr);
 		for (int i = 0; i < 2; i++) {
-			Files.createDirectories(Paths.get("torrentData/client" + i));			
-			OutputStream out = new FileOutputStream(new File("torrentData/client" + i + "/file1"));
+			Files.createDirectories(root[i]);			
+			OutputStream out = new FileOutputStream(root[i].resolve("file1").toString());
 			out.write(arr);
 			out.close();
 		}
@@ -148,9 +151,68 @@ public class InteractionTests {
 		assertEquals("No files yet\n>", getOutput(0));
 		
 		commandTo(0, "publish nonExstFile");
-		assertEquals("Failed to publish file.\n" +
-				 " nonExstFile not found.\n"
-				 + ">", getOutput(0));
+		assertEquals("Failed to publish file.\n" + 
+				"nonExstFile not exists.\n>", getOutput(0));
+	}
+	
+	@Test
+	public void testDownloadFromSinglePeer() throws InterruptedException, IOException {
+		startServer();
+		
+		cl[0].start();
+		
+		commandTo(0, "publish " + root[0].resolve("file1"));
+		assertEquals(">The file has an id 0\n" + 
+				">", getOutput(0));
+		
+		commandTo(0, "status");
+		assertEquals("0 torrentData/client0/file1 complete"
+				+ "\n>", getOutput(0));
+		
+		
+		commandTo(0, "status");
+		assertEquals("0 torrentData/client0/file1 complete"
+				+ "\n>", getOutput(0));
+		
+		commandTo(0, "list");
+		assertEquals("0 file1 complete\n" + 
+				">", getOutput(0));
+		
+		cl[2].start();
+		assertEquals(">", getOutput(2));
+		
+		commandTo(2, "list");
+		assertEquals("0 file1 \n" + 
+				">", getOutput(2));
+		
+		cl[0].interrupt();
+		cl[0].join();
+		
+		commandTo(2, "list");
+		assertEquals("0 file1 \n" + 
+				">", getOutput(2));
+		
+		commandTo(2, "get 0 " + root[2].resolve("file1_copy"));
+		assertEquals(">", getOutput(2));
+		
+		commandTo(2, "status");
+		assertEquals("0 torrentData/client2/file1_copy -> 0/2\n" + 
+				">", getOutput(2));
+		
+		initClient(0);
+		cl[0].start();
+		assertEquals(">", getOutput(0));
+		
+		commandTo(0, "status");
+		assertEquals("0 torrentData/client0/file1 complete"
+				+ "\n>", getOutput(0));
+		
+		String outp;
+		do {
+			commandTo(2, "status");
+			outp = getOutput(2);
+			//System.out.println(outp);
+		} while (!"0 torrentData/client2/file1_copy complete\n>".equals(outp));
 	}
 	
 }
