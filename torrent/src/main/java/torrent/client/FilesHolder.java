@@ -63,7 +63,7 @@ public class FilesHolder {
 		load();
 	}
 
-	private void writeMaps() throws IOException {
+	public void writeMaps() throws IOException {
 		if (!Files.exists(mapPath))
 			Files.createDirectories(mapPath);
 

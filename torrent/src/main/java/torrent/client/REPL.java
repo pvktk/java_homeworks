@@ -147,21 +147,12 @@ public class REPL {
 					+ "delete <id>\n"
 					+ "get <id> <savePath>\n"
 					+ "pause <id>\n"
+					+ "resume <id>\n"
 					+ "status\n"
 					+ "help";
 
 	public void startRepl() {
-		/*
-		Options options = new Options();
-		options.addOption("list", "list files, known to server");
-		options.addOption("publish", true, "make file known by torrent");
-		options.addOption("delete", true, "make file unknown by your client");
-		options.addOption("get", true, "download file by id");
-		options.addOption("pause", true, "stop file download");
-		options.addOption("resume", true, "resume file downloading");
-		options.addOption("status", true, "list files known by your client and their status");
-		 */
-
+		
 		try (Scanner in = new Scanner(inStream)) {
 			while (true) {
 				try {
@@ -195,6 +186,11 @@ public class REPL {
 					case "pause":
 					{
 						downloader.stopFileDownload(in.nextInt());
+					}
+					break;
+					case "resume":
+					{
+						downloader.startFileDownload(in.nextInt());
 					}
 					break;
 					case "status":
