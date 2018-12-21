@@ -157,6 +157,18 @@ public class InteractionTests {
 		commandTo(0, "publish nonExstFile");
 		assertEquals("Failed to publish file.\n" + 
 				"nonExstFile not exists.\n>", getOutput(0));
+		
+		commandTo(0, "publish " + root[0].resolve("file1"));
+		getOutput(0);
+		commandTo(0, "list");
+		assertEquals("0 file1 complete\n>", getOutput(0));
+		
+		commandTo(0, "publish " + root[0].resolve("file1"));
+		assertEquals("file with specified path used\n" + 
+				">", getOutput(0));
+		
+		commandTo(0, "list");
+		assertEquals("0 file1 complete\n>", getOutput(0));
 	}
 
 	@Test
@@ -231,7 +243,7 @@ public class InteractionTests {
 		cl[0].start();
 		cl[1].start();
 
-		commandTo(0, "publish " + root[0].resolve("file1").toString());
+		commandTo(0, "publish " + root[0].resolve("file1"));
 		assertEquals(">The file has an id 0\n" + 
 				">", getOutput(0));
 		fh[0]

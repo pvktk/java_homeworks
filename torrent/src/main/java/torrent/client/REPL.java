@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.SocketAddress;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
@@ -85,12 +86,16 @@ public class REPL {
 		filesHolder.deleteFile(id);
 	}
 
-	void publishFile(String pathTo) throws FileProblemException {
-		pathTo = pathTo.trim();
+	void publishFile(String path) throws FileProblemException {
+		Path pathTo = Paths.get(path.trim());
 		try {
+			if (filesHolder.filePaths.containsValue(pathTo.toString())) {
+				throw new FileProblemException("file with specified path used");
+			}
+
 			int id = Uploader.uploadAndGetId(toServer, pathTo);
 
-			filesHolder.addExistingFile(id, Paths.get(pathTo));
+			filesHolder.addExistingFile(id, pathTo);
 			out.println("The file has an id " + id);
 		}	catch (FileNotFoundException e) {
 			//e.printStackTrace();
