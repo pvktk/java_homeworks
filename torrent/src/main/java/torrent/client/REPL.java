@@ -106,6 +106,10 @@ public class REPL {
 			out.println("Failed to publish file.\n" + e.getMessage());
 		}
 	}
+	
+	int getNPieces(long size) {
+		return Math.toIntExact((size - 1 + filesHolder.pieceSize) / filesHolder.pieceSize);
+	}
 
 	void listAvaliableFiles() {
 		try {
@@ -117,14 +121,14 @@ public class REPL {
 			for (int id : listedFilesName.keySet()) {
 				out.print(id + " " + listedFilesName.get(id) + " ");
 				if (!filesHolder.fileStatus.containsKey(id)) {
-					out.println();
+					out.println(0 + "/" + getNPieces(listedFilesSize.get(id)));
 					return;
 				}
 				switch (filesHolder.fileStatus.get(id)) {
 				case Complete:
 				{
-					out.println("complete");
-					continue;
+					out.print("complete");
+					break;
 				}
 				case Downloading:
 				{
@@ -137,6 +141,9 @@ public class REPL {
 					break;
 				}
 				}
+				
+				out.println(" " + filesHolder.completePieces.get(id).size() 
+						+ "/" + filesHolder.numParts(id));
 			}
 
 		} catch (IOException e) {

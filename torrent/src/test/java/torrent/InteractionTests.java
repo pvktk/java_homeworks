@@ -161,14 +161,14 @@ public class InteractionTests {
 		commandTo(0, "publish " + root[0].resolve("file1"));
 		getOutput(0);
 		commandTo(0, "list");
-		assertEquals("0 file1 complete\n>", getOutput(0));
+		assertEquals("0 file1 complete 2/2\n>", getOutput(0));
 		
 		commandTo(0, "publish " + root[0].resolve("file1"));
 		assertEquals("file with specified path used\n" + 
 				">", getOutput(0));
 		
 		commandTo(0, "list");
-		assertEquals("0 file1 complete\n>", getOutput(0));
+		assertEquals("0 file1 complete 2/2\n>", getOutput(0));
 	}
 
 	@Test
@@ -191,21 +191,21 @@ public class InteractionTests {
 				+ "\n>", getOutput(0));
 
 		commandTo(0, "list");
-		assertEquals("0 file1 complete\n" + 
+		assertEquals("0 file1 complete 2/2\n" + 
 				">", getOutput(0));
 
 		cl[2].start();
 		assertEquals(">", getOutput(2));
 
 		commandTo(2, "list");
-		assertEquals("0 file1 \n" + 
+		assertEquals("0 file1 0/2\n" + 
 				">", getOutput(2));
 
 		cl[0].interrupt();
 		cl[0].join();
 
 		commandTo(2, "list");
-		assertEquals("0 file1 \n" + 
+		assertEquals("0 file1 0/2\n" + 
 				">", getOutput(2));
 
 		commandTo(2, "get 0 " + root[2].resolve("file1_copy"));
@@ -307,7 +307,7 @@ public class InteractionTests {
 		cl[2].start();
 		getOutput(2);
 		commandTo(2, "list");
-		assertEquals("0 file1 \n>", getOutput(2));
+		assertEquals("0 file1 0/2\n>", getOutput(2));
 		commandTo(2, "status");
 		assertEquals("No files yet\n>", getOutput(2));
 		commandTo(2, "get 0 " + root[2].resolve("file1_copy"));
