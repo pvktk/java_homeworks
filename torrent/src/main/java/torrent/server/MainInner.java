@@ -42,7 +42,6 @@ public class MainInner implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
-			System.out.println("Saving server state...");
 			try {
 				cleanThread.interrupt();
 				srvThread.interrupt();
@@ -52,7 +51,6 @@ public class MainInner implements Runnable {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			} catch (InterruptedException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 		}

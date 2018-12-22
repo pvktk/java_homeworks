@@ -69,11 +69,9 @@ public class MainInner implements Runnable {
 				updater.join();
 				replTh.join();
 			} catch (InterruptedException e2) {
-				// TODO Auto-generated catch block
 				e2.printStackTrace();
 			}
 
-			out.println("Saving client state...");
 			try {
 				filesHolder.save();
 				filesHolder.close();

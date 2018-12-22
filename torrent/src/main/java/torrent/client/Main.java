@@ -14,7 +14,7 @@ public class Main {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
-				System.out.println("Saving client state...");
+				System.out.println("\nSaving client state...");
 				t.interrupt();
 			}
 		});
