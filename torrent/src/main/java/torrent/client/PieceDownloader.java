@@ -7,7 +7,7 @@ import java.nio.channels.CompletionHandler;
 
 public class PieceDownloader implements CompletionHandler<Integer, AsynchronousSocketChannel> {
 	private int fileId;
-	private int pieceOffset, pieceLength;
+	private int pieceLength;
 	private int pieceIdx;
 	private SingleFileDownloader filesDownloader;
 
@@ -18,12 +18,11 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 		this.fileId = fileId;
 
 		this.pieceIdx = pieceIdx;
-		filesDownloader.filesHolder.files.get(fileId);
 
-		this.pieceOffset = filesDownloader.filesHolder.pieceOffset(fileId, pieceIdx);
+		filesDownloader.filesHolder.pieceOffset(fileId, pieceIdx);
 		this.pieceLength = filesDownloader.filesHolder.pieceLenght(fileId, pieceIdx);
 
-		buffer = ByteBuffer.wrap(filesDownloader.filesHolder.files.get(fileId), pieceOffset, pieceLength);
+		buffer = ByteBuffer.wrap(new byte[pieceLength]);
 	}
 
 	public ByteBuffer getBuffer() {
@@ -35,9 +34,10 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 		if (buffer.hasRemaining()) {
 			attachment.read(buffer, attachment, this);
 		} else {
-			filesDownloader.filesHolder.completePieces.get(fileId).add(pieceIdx);
-			filesDownloader.checkIfComplete();
 			try {
+				filesDownloader.filesHolder.putPiece(fileId, pieceIdx, buffer.array());
+				filesDownloader.filesHolder.completePieces.get(fileId).add(pieceIdx);
+				filesDownloader.checkIfComplete();
 				attachment.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block

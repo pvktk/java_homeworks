@@ -305,9 +305,13 @@ public class InteractionTests {
 		cl[0].join();
 
 		cl[2].start();
-		commandTo(2, "list");
-		commandTo(2, "get 0 " + root[2].resolve("file1_copy"));
 		getOutput(2);
+		commandTo(2, "list");
+		assertEquals("0 file1 \n>", getOutput(2));
+		commandTo(2, "status");
+		assertEquals("No files yet\n>", getOutput(2));
+		commandTo(2, "get 0 " + root[2].resolve("file1_copy"));
+		assertEquals(">", getOutput(2));
 		commandTo(2, "status");
 		assertEquals("0 torrentData/client2/file1_copy -> 0/2\n>", getOutput(2));
 		

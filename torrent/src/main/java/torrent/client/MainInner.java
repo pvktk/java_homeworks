@@ -76,6 +76,7 @@ public class MainInner implements Runnable {
 			out.println("Saving client state...");
 			try {
 				filesHolder.save();
+				filesHolder.close();
 			} catch (IOException e1) {
 				out.println("Saving client state failed");
 				out.print(e.getMessage());

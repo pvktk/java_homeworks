@@ -37,13 +37,13 @@ public class REPL {
 		this.inStream = inStream;
 	}
 
-	void printStatus() {
+	void printStatus() throws IOException {
 
-		if (filesHolder.files.isEmpty()) {
+		if (filesHolder.fileStatus.isEmpty()) {
 			out.println("No files yet");
 		}
 
-		for (Integer id : filesHolder.files.keySet()) {
+		for (Integer id : filesHolder.fileStatus.keySet()) {
 			out.print(id + " " + filesHolder.filePaths.get(id) + " ");
 			switch (filesHolder.fileStatus.get(id)) {
 			case Complete:
@@ -157,7 +157,7 @@ public class REPL {
 					+ "help";
 
 	public void startRepl() {
-		
+
 		try (Scanner in = new Scanner(inStream)) {
 			while (true) {
 				try {

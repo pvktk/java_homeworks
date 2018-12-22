@@ -10,9 +10,9 @@ import torrent.common.ConcreteTaskHandler;
 import torrent.common.ServerRequestHandler.MessageProcessStatus;
 
 public class GetHandler implements ConcreteTaskHandler {
-	
+
 	private final FilesHolder fHolder;
-	
+
 	GetHandler(FilesHolder fHolder) {
 		this.fHolder = fHolder;
 	}
@@ -22,16 +22,13 @@ public class GetHandler implements ConcreteTaskHandler {
 		try {
 			int id = in.readInt();
 			int partNum = in.readInt();
-			
+
 			if (partNum >= fHolder.numParts(id)) {
 				return MessageProcessStatus.ERROR;
 			}
 
-			out.write(
-					fHolder.files.get(id),
-					fHolder.pieceOffset(id, partNum),
-					fHolder.pieceLenght(id, partNum));
-			
+			out.write(fHolder.getPiece(id, partNum));
+
 			return MessageProcessStatus.SUCCESS;
 		} catch (EOFException e) {
 			return MessageProcessStatus.INCOMPLETE;
