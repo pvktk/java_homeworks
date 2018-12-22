@@ -37,6 +37,29 @@ public class REPL {
 		this.inStream = inStream;
 	}
 
+	void printLineForExistingFile(int id, String printName) {
+		out.print(id + " " + printName + " ");
+		switch (filesHolder.fileStatus.get(id)) {
+		case Complete:
+		{
+			out.print("complete");
+			break;
+		}
+		case Downloading:
+		{
+			out.print("->");
+			break;
+		}
+		case Paused:
+		{
+			out.print("||");
+			break;
+		}
+		}
+		out.println(" " + filesHolder.completePieces.get(id).size() + "/"
+				+ filesHolder.numParts(id));
+	}
+
 	void printStatus() throws IOException {
 
 		if (filesHolder.fileStatus.isEmpty()) {
@@ -44,26 +67,28 @@ public class REPL {
 		}
 
 		for (Integer id : filesHolder.fileStatus.keySet()) {
-			out.print(id + " " + filesHolder.filePaths.get(id) + " ");
-			switch (filesHolder.fileStatus.get(id)) {
-			case Complete:
-			{
-				out.println("complete");
-				continue;
+			printLineForExistingFile(id, filesHolder.filePaths.get(id));
+		}
+	}
+
+	void listAvaliableFiles() {
+		try {
+			ServerFilesLister.list(toServer, listedFilesSize, listedFilesName);
+
+			if (listedFilesName.isEmpty()) {
+				out.println("No files avaliable on server");
 			}
-			case Downloading:
-			{
-				out.print("->");
-				break;
+			for (int id : listedFilesName.keySet()) {
+				if (!filesHolder.fileStatus.containsKey(id)) {
+					out.print(id + " " + listedFilesName.get(id) + " ");
+					out.println(0 + "/" + getNPieces(listedFilesSize.get(id)));
+				} else {
+					printLineForExistingFile(id, listedFilesName.get(id));
+				}
 			}
-			case Paused:
-			{
-				out.print("||");
-				break;
-			}
-			}
-			out.println(" " + filesHolder.completePieces.get(id).size() + "/"
-					+ filesHolder.numParts(id));
+
+		} catch (IOException e) {
+			out.println("Failed to list avaliable files.\n" + e.getMessage());
 		}
 	}
 
@@ -106,49 +131,9 @@ public class REPL {
 			out.println("Failed to publish file.\n" + e.getMessage());
 		}
 	}
-	
+
 	int getNPieces(long size) {
 		return Math.toIntExact((size - 1 + filesHolder.pieceSize) / filesHolder.pieceSize);
-	}
-
-	void listAvaliableFiles() {
-		try {
-			ServerFilesLister.list(toServer, listedFilesSize, listedFilesName);
-
-			if (listedFilesName.isEmpty()) {
-				out.println("No files avaliable on server");
-			}
-			for (int id : listedFilesName.keySet()) {
-				out.print(id + " " + listedFilesName.get(id) + " ");
-				if (!filesHolder.fileStatus.containsKey(id)) {
-					out.println(0 + "/" + getNPieces(listedFilesSize.get(id)));
-					return;
-				}
-				switch (filesHolder.fileStatus.get(id)) {
-				case Complete:
-				{
-					out.print("complete");
-					break;
-				}
-				case Downloading:
-				{
-					out.print("->");
-					break;
-				}
-				case Paused:
-				{
-					out.print("||");
-					break;
-				}
-				}
-				
-				out.println(" " + filesHolder.completePieces.get(id).size() 
-						+ "/" + filesHolder.numParts(id));
-			}
-
-		} catch (IOException e) {
-			out.println("Failed to list avaliable files.\n" + e.getMessage());
-		}
 	}
 
 	final String helpMessage = 
