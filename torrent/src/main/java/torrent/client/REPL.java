@@ -8,6 +8,7 @@ import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.InputMismatchException;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -136,7 +137,7 @@ public class REPL {
 		return Math.toIntExact((size - 1 + filesHolder.pieceSize) / filesHolder.pieceSize);
 	}
 
-	final String helpMessage = 
+	public final static String helpMessage = 
 			"This is torrent client.\n"
 					+ "commands:\n"
 					+ "list\n"
@@ -160,6 +161,7 @@ public class REPL {
 					{
 						out.println(helpMessage);
 					}
+					break;
 					case "list":
 					{
 						listAvaliableFiles();
@@ -203,6 +205,9 @@ public class REPL {
 					}
 				} catch (IOException | FileProblemException | NullPointerException e) {
 					out.println(e.getMessage());
+				} catch (InputMismatchException imme) {
+					in.next();
+					out.println("Input mismatch");
 				} catch (NoSuchElementException e) {
 					return;
 				}

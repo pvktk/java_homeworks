@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import torrent.client.FilesHolder;
 import torrent.client.FilesHolder.FileStatus;
+import torrent.client.REPL;
 import torrent.server.MainInner;
 
 public class InteractionTests {
@@ -121,7 +122,13 @@ public class InteractionTests {
 		cl[0].start();
 
 		assertEquals(">", getOutput(0));
-
+		
+		commandTo(0, "help");
+		assertEquals(REPL.helpMessage + "\n>", getOutput(0));
+		
+		commandTo(0, "delete a");
+		assertEquals("Input mismatch\n>", getOutput(0));
+		
 		commandTo(0, "list");
 		assertEquals(
 				"Failed to list avaliable files.\n" + 
