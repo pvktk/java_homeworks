@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 
 import torrent.client.FilesHolder.FileStatus;
 
@@ -31,7 +34,11 @@ public class SingleFileDownloader implements Runnable {
 	private List<SocketAddress> fileSources = new ArrayList<>();
 	private Map<Integer, List<SocketAddress>> pieceSources = new HashMap<>();
 	private Map<Integer, AsynchronousSocketChannel> pieceChannels = new HashMap<>();
-
+	
+	private final int numOfActivePieces = 5;
+	private final ExecutorService pieceQueue = Executors.newFixedThreadPool(numOfActivePieces);
+	private final Semaphore pieceSemaphore = new Semaphore(numOfActivePieces);
+	
 	public SingleFileDownloader(SocketAddress srvAddr, FilesHolder stm, int fileId) {
 		this.srvAddr = srvAddr;
 		this.filesHolder = stm;
@@ -129,38 +136,46 @@ public class SingleFileDownloader implements Runnable {
 			if (chan != null) {
 				if (!chan.isOpen()) {
 					pieceChannels.remove(i);
+				} else {
+					continue;
 				}
 			}
 
 			List<SocketAddress> sources = pieceSources.get(i);
 			if (!sources.isEmpty()) {
 				int rIdx = rand.nextInt(sources.size());
-
-				try {
-					chan = AsynchronousSocketChannel.open();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				try {
-					chan.connect(sources.get(rIdx)).get();
-				} catch (ExecutionException e) {
-					continue;
-				} catch (InterruptedException e) {
-					return;
-				}
-				try {
-					if (!getRequest(chan, fileId, i)) {
-						System.out.println("SFD: get request failed");
-						continue;
+				
+				int nPiece = i;
+				pieceQueue.execute(() -> {
+					try {
+						pieceSemaphore.acquire();
+					} catch (InterruptedException e) {
+						return;
 					}
-				} catch (IOException e) {
-					e.printStackTrace();
-					continue;
-				}
-				PieceDownloader pdl = new PieceDownloader(this, fileId, i);
-				chan.read(pdl.getBuffer(), chan, pdl);
-				pieceChannels.put(i, chan);
+					AsynchronousSocketChannel pieceChan;
+					try {
+						pieceChan = AsynchronousSocketChannel.open();
+						pieceChan.connect(sources.get(rIdx)).get();
+						if (!getRequest(pieceChan, fileId, nPiece)) {
+							System.out.println("SFD: get request failed");
+							return;
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
+						return;
+					} catch (InterruptedException e) {
+						return;
+					} catch (ExecutionException e) {
+						return;
+					} finally {
+						pieceSemaphore.release();
+					}
+					
+					PieceDownloader pdl = new PieceDownloader(this, fileId, nPiece, pieceSemaphore);
+					pieceChan.read(pdl.getBuffer(), pieceChan, pdl);
+					pieceChannels.put(nPiece, pieceChan);
+				});
+				
 			}
 		}
 	}
@@ -179,6 +194,7 @@ public class SingleFileDownloader implements Runnable {
 	}
 
 	private void closeAllChannels() {
+		pieceQueue.shutdownNow();
 		pieceChannels.forEach((i, ch) -> {
 			try {
 				ch.close();

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.concurrent.Semaphore;
 
 public class PieceDownloader implements CompletionHandler<Integer, AsynchronousSocketChannel> {
 	private int fileId;
@@ -12,8 +13,11 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 	private SingleFileDownloader filesDownloader;
 
 	private ByteBuffer buffer;
+	private final Semaphore pieceSemaphore;
 
-	public PieceDownloader(SingleFileDownloader filesDownloader, int fileId, int pieceIdx) {
+	public PieceDownloader(SingleFileDownloader filesDownloader,
+			int fileId, int pieceIdx,
+			Semaphore pieceSemaphore) {
 		this.filesDownloader = filesDownloader;
 		this.fileId = fileId;
 
@@ -23,6 +27,8 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 		this.pieceLength = filesDownloader.filesHolder.pieceLenght(fileId, pieceIdx);
 
 		buffer = ByteBuffer.wrap(new byte[pieceLength]);
+		
+		this.pieceSemaphore = pieceSemaphore;
 	}
 
 	public ByteBuffer getBuffer() {
@@ -39,6 +45,7 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 				filesDownloader.filesHolder.completePieces.get(fileId).add(pieceIdx);
 				filesDownloader.checkIfComplete();
 				attachment.close();
+				pieceSemaphore.release();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -48,6 +55,7 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 
 	@Override
 	public void failed(Throwable exc, AsynchronousSocketChannel attachment) {
+		pieceSemaphore.release();
 		System.err.println("PieceDownloader failed");
 	}
 
