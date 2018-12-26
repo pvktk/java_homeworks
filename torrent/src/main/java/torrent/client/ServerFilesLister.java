@@ -20,7 +20,7 @@ public class ServerFilesLister {
 
 			dout.writeByte(1);
 			dout.flush();
-			
+
 			fileSizes.clear();
 			filesNames.clear();
 
@@ -34,14 +34,18 @@ public class ServerFilesLister {
 				fileSizes.put(id, size);
 				filesNames.put(id, name);
 			}
-		} finally {
-			try {
-				dinp.close();
-				dout.close();
-				s.close();
-			} catch (NullPointerException npe) {
+		} catch (IOException e) {
+			if (s == null || dinp == null || dout == null) {
 				throw new IOException("Failed to connect to server");
 			}
+			throw e;
+		} finally {
+			if (dinp != null)
+				dinp.close();
+			if (dout != null)
+				dout.close();
+			if (s != null)
+				s.close();
 		}
 	}
 }

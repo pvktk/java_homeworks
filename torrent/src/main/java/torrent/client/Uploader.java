@@ -16,9 +16,9 @@ public class Uploader {
 		DataInputStream dinp = null;
 		try {
 			s = new Socket();
-			
+
 			s.connect(addr);
-			
+
 			dout = new DataOutputStream(s.getOutputStream());
 			dinp = new DataInputStream(s.getInputStream());
 
@@ -31,16 +31,20 @@ public class Uploader {
 			dout.writeUTF(filePath.getFileName().toString());
 			dout.writeLong(len);
 			dout.flush();
-			
+
 			return dinp.readInt();
-		} finally {
-			try {
-				dinp.close();
-				dout.close();
-				s.close();
-			} catch (NullPointerException npe) {
+		} catch (IOException e) {
+			if (s == null || dinp == null || dout == null) {
 				throw new IOException("Failed to connect to server");
 			}
+			throw e;
+		} finally {
+			if (dinp != null)
+				dinp.close();
+			if (dout != null)
+				dout.close();
+			if (s != null)
+				s.close();
 		}
 	}
 }

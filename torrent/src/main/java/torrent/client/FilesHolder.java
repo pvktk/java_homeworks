@@ -102,7 +102,7 @@ public class FilesHolder implements Closeable{
 				|| !filePaths.keySet().equals(fileSize.keySet())) {
 			throw new RuntimeException("maps key sets not equal");
 		}
-	
+
 		for (Entry<Integer, String> ent : filePaths.entrySet()) {
 			if (!Paths.get(ent.getValue()).toFile().exists()) {
 				completePieces.get(ent.getKey()).clear();
@@ -133,12 +133,12 @@ public class FilesHolder implements Closeable{
 		if (filePaths.containsValue(filePath)) {
 			throw new FileProblemException("file with specified path used");
 		}
-		
+
 		filePaths.put(id, filePath);
 		completePieces.put(id, ConcurrentHashMap.newKeySet());
 		fileStatus.put(id, FileStatus.Paused);
 		fileSize.put(id, size);
-		
+
 		writeMaps();
 	}
 
@@ -163,21 +163,22 @@ public class FilesHolder implements Closeable{
 	}
 
 	private RandomAccessFile getOrCreateFile(int fileId) throws IOException {
-		synchronized(files) {
-			RandomAccessFile res = files.get(fileId);
-			if (res == null) {
-				Path parent = Paths.get(filePaths.get(fileId)).getParent();
-				if (parent != null) {
-					Files.createDirectories(parent);
+		if (!files.containsKey(fileId)) {
+			synchronized (files) {
+				if (!files.containsKey(fileId)) {
+					Path parent = Paths.get(filePaths.get(fileId)).getParent();
+					if (parent != null) {
+						Files.createDirectories(parent);
+					}
+					RandomAccessFile res_local = new RandomAccessFile(filePaths.get(fileId), "rws");
+					if (res_local.length() == 0)
+						res_local.setLength(fileSize.get(fileId));
+					files.put(fileId, res_local);
 				}
-				res = new RandomAccessFile(filePaths.get(fileId), "rws");
-				if (res.length() == 0)
-					res.setLength(fileSize.get(fileId));
-				files.put(fileId, res);
 			}
-			
-			return res;
 		}
+
+		return files.get(fileId);
 	}
 
 	public byte[] getPiece(int fileId, int pieceId) throws IOException {

@@ -186,6 +186,7 @@ public class InteractionTests {
 		cl[0].start();
 
 		commandTo(0, "publish " + root[0].resolve("file1"));
+		Thread.sleep(1000);
 		assertEquals(">The file has an id 0\n" + 
 				">", getOutput(0));
 
@@ -309,8 +310,9 @@ public class InteractionTests {
 
 		cl[0].start();
 		commandTo(0, "publish " + root[0].resolve("file1").toString());
-
-		getOutput(0);
+		Thread.sleep(1000);
+		assertEquals(">The file has an id 0\n" + 
+				">", getOutput(0));
 
 		commandTo(0, "status");
 		assertEquals("0 torrentData/client0/file1 complete 15/15\n>", getOutput(0));
