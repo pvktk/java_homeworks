@@ -19,7 +19,8 @@ public class ServerFilesLister {
 			dinp = new DataInputStream(s.getInputStream());
 
 			dout.writeByte(1);
-
+			dout.flush();
+			
 			fileSizes.clear();
 			filesNames.clear();
 

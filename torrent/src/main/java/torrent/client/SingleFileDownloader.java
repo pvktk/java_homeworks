@@ -28,6 +28,7 @@ public class SingleFileDownloader implements Runnable {
 	final FilesHolder filesHolder;
 	private final int fileId;
 	private final int numPieces;
+	private final FilesDownloader filesDownloader;
 
 	private Random rand = new Random(3);
 
@@ -39,12 +40,14 @@ public class SingleFileDownloader implements Runnable {
 	private final ExecutorService pieceQueue = Executors.newFixedThreadPool(numOfActivePieces);
 	private final Semaphore pieceSemaphore = new Semaphore(numOfActivePieces);
 	
-	public SingleFileDownloader(SocketAddress srvAddr, FilesHolder stm, int fileId) {
+	public SingleFileDownloader(SocketAddress srvAddr, FilesHolder stm, int fileId, FilesDownloader fdl) {
 		this.srvAddr = srvAddr;
 		this.filesHolder = stm;
 		this.fileId = fileId;
 
 		numPieces = stm.numParts(fileId);
+		
+		this.filesDownloader = fdl;
 	}
 
 	private void updateFileSources() {
@@ -185,6 +188,7 @@ public class SingleFileDownloader implements Runnable {
 			return false;
 		}
 		try {
+			filesDownloader.stopFileDownload(fileId);
 			filesHolder.fileStatus.put(fileId, FileStatus.Complete);
 			filesHolder.save();
 		} catch (IOException e){

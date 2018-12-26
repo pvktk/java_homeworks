@@ -10,7 +10,7 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 	private int fileId;
 	private int pieceLength;
 	private int pieceIdx;
-	private SingleFileDownloader filesDownloader;
+	private SingleFileDownloader singleFileDownloader;
 
 	private ByteBuffer buffer;
 	private final Semaphore pieceSemaphore;
@@ -18,12 +18,11 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 	public PieceDownloader(SingleFileDownloader filesDownloader,
 			int fileId, int pieceIdx,
 			Semaphore pieceSemaphore) {
-		this.filesDownloader = filesDownloader;
+		this.singleFileDownloader = filesDownloader;
 		this.fileId = fileId;
 
 		this.pieceIdx = pieceIdx;
 
-		filesDownloader.filesHolder.pieceOffset(fileId, pieceIdx);
 		this.pieceLength = filesDownloader.filesHolder.pieceLenght(fileId, pieceIdx);
 
 		buffer = ByteBuffer.wrap(new byte[pieceLength]);
@@ -41,14 +40,18 @@ public class PieceDownloader implements CompletionHandler<Integer, AsynchronousS
 			attachment.read(buffer, attachment, this);
 		} else {
 			try {
-				filesDownloader.filesHolder.putPiece(fileId, pieceIdx, buffer.array());
-				filesDownloader.filesHolder.completePieces.get(fileId).add(pieceIdx);
-				filesDownloader.checkIfComplete();
-				attachment.close();
-				pieceSemaphore.release();
+				singleFileDownloader.filesHolder.putPiece(fileId, pieceIdx, buffer.array());
+				singleFileDownloader.filesHolder.completePieces.get(fileId).add(pieceIdx);
+				singleFileDownloader.checkIfComplete();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
+			} finally {
+				try {
+					attachment.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				pieceSemaphore.release();
 			}
 		}
 	}

@@ -30,7 +30,8 @@ public class Uploader {
 			dout.writeByte(2);
 			dout.writeUTF(filePath.getFileName().toString());
 			dout.writeLong(len);
-
+			dout.flush();
+			
 			return dinp.readInt();
 		} finally {
 			try {

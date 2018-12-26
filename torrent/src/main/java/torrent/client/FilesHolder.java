@@ -31,6 +31,7 @@ public class FilesHolder implements Closeable{
 
 	public Map<Integer, FileStatus> fileStatus = new ConcurrentHashMap<>();
 	public Map<Integer, Set<Integer>> completePieces = new ConcurrentHashMap<>();
+	public Map<Integer, Long> fileSize = new ConcurrentHashMap<>();
 	//
 
 	ObjectMapper mapper = new ObjectMapper();
@@ -38,13 +39,10 @@ public class FilesHolder implements Closeable{
 	private final Path filePathsPath;
 	private final Path fileStatusPath;
 	private final Path comletePiecesPath;
+	private final Path fileSizePath;
 
 	public int numParts(int fileId) {
-		try {
-			return Math.toIntExact((files.get(fileId).length() + pieceSize - 1) / pieceSize);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+		return Math.toIntExact((fileSize.get(fileId) + pieceSize - 1) / pieceSize);
 	}
 
 	public int pieceOffset(int fileId, int numPart) {
@@ -53,11 +51,7 @@ public class FilesHolder implements Closeable{
 
 	public int pieceLenght(int fileId, int numPart) {
 		int file_length;
-		try {
-			file_length = Math.toIntExact(files.get(fileId).length());
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+		file_length = Math.toIntExact(fileSize.get(fileId));
 		return (numPart + 1) * pieceSize <= file_length
 				? pieceSize
 						: file_length - numPart * pieceSize;
@@ -68,6 +62,7 @@ public class FilesHolder implements Closeable{
 		filePathsPath = mapPath.resolve("filepaths");
 		fileStatusPath = mapPath.resolve("filesStatus");
 		comletePiecesPath = mapPath.resolve("completePieces");
+		fileSizePath = mapPath.resolve("fileSizes");
 		load();
 	}
 
@@ -83,6 +78,9 @@ public class FilesHolder implements Closeable{
 
 		comletePiecesPath.toFile().createNewFile();
 		mapper.writeValue(comletePiecesPath.toFile(), completePieces);
+
+		fileSizePath.toFile().createNewFile();
+		mapper.writeValue(fileSizePath.toFile(), fileSize);
 	}
 
 	public void save() throws JsonGenerationException, JsonMappingException, IOException {
@@ -96,16 +94,17 @@ public class FilesHolder implements Closeable{
 			fileStatus = mapper.readValue(fileStatusPath.toFile(), new TypeReference<Map<Integer, FileStatus>>() {});
 		if (comletePiecesPath.toFile().exists())
 			completePieces = mapper.readValue(comletePiecesPath.toFile(), new TypeReference<Map<Integer, Set<Integer>>>() {});
+		if (fileSizePath.toFile().exists())
+			fileSize = mapper.readValue(fileSizePath.toFile(), new TypeReference<Map<Integer, Long>>() {});
 
 		if (!filePaths.keySet().equals(fileStatus.keySet())
-				|| !filePaths.keySet().equals(completePieces.keySet())) {
+				|| !filePaths.keySet().equals(completePieces.keySet())
+				|| !filePaths.keySet().equals(fileSize.keySet())) {
 			throw new RuntimeException("maps key sets not equal");
 		}
-
+	
 		for (Entry<Integer, String> ent : filePaths.entrySet()) {
-			try {
-				files.put(ent.getKey(), new RandomAccessFile(ent.getValue(), "rws"));
-			} catch (FileNotFoundException fnfe) {
+			if (!Paths.get(ent.getValue()).toFile().exists()) {
 				completePieces.get(ent.getKey()).clear();
 				fileStatus.put(ent.getKey(), FileStatus.Downloading);
 			}
@@ -114,12 +113,16 @@ public class FilesHolder implements Closeable{
 
 	public void deleteFile(int id) {
 		if (! files.containsKey(id)) {
-			throw new NullPointerException("File isn't known.");
+			throw new IllegalStateException("File isn't known.");
 		}
+		try {
+			files.get(id).close();
+		} catch (IOException e) {}
 		files.remove(id);
 		filePaths.remove(id);
 		fileStatus.remove(id);
 		completePieces.remove(id);
+		fileSize.remove(id);
 	}
 
 	public void addFileToDownload(int id, long size, String filePath) throws FileProblemException, FileNotFoundException, IOException {
@@ -130,17 +133,12 @@ public class FilesHolder implements Closeable{
 		if (filePaths.containsValue(filePath)) {
 			throw new FileProblemException("file with specified path used");
 		}
-
-		try {
-			Paths.get(filePath).getParent().toFile().mkdirs();
-		} catch (NullPointerException npe) {}
-
-		RandomAccessFile file = new RandomAccessFile(filePath, "rws");
-		file.setLength(size);
-		files.put(id, file);
+		
 		filePaths.put(id, filePath);
 		completePieces.put(id, ConcurrentHashMap.newKeySet());
 		fileStatus.put(id, FileStatus.Paused);
+		fileSize.put(id, size);
+		
 		writeMaps();
 	}
 
@@ -153,9 +151,10 @@ public class FilesHolder implements Closeable{
 			throw new FileProblemException("file with specified path used");
 		}
 
-		files.put(id, new RandomAccessFile(path.toFile(), "rws"));
+		fileSize.put(id, path.toFile().length());
 		filePaths.put(id, path.toString());
 		fileStatus.put(id, FileStatus.Complete);
+
 		completePieces.put(id,
 				Stream.iterate(0, i -> i + 1)
 				.limit(numParts(id))
@@ -163,20 +162,43 @@ public class FilesHolder implements Closeable{
 		writeMaps();
 	}
 
+	private RandomAccessFile getOrCreateFile(int fileId) throws IOException {
+		synchronized(files) {
+			RandomAccessFile res = files.get(fileId);
+			if (res == null) {
+				Path parent = Paths.get(filePaths.get(fileId)).getParent();
+				if (parent != null) {
+					Files.createDirectories(parent);
+				}
+				res = new RandomAccessFile(filePaths.get(fileId), "rws");
+				if (res.length() == 0)
+					res.setLength(fileSize.get(fileId));
+				files.put(fileId, res);
+			}
+			
+			return res;
+		}
+	}
+
 	public byte[] getPiece(int fileId, int pieceId) throws IOException {
 		byte[] buf = new byte[pieceLenght(fileId, pieceId)];
-		files.get(fileId).seek(pieceId * pieceSize);
-		files.get(fileId).readFully(buf);
+		RandomAccessFile file = getOrCreateFile(fileId);
+		synchronized (file) {
+			file.seek(pieceOffset(fileId, pieceId));
+			file.readFully(buf);
+		}
 		return buf;
 	}
 
 	public void putPiece(int fileId, int pieceId, byte[] buf) throws IOException {
 		if (buf.length != pieceLenght(fileId, pieceId)) {
-			throw new RuntimeException("Attemp to put block of incorrect size");
+			throw new IllegalStateException("Attemp to put block of incorrect size");
 		}
-		RandomAccessFile file = files.get(fileId);
-		file.seek(pieceId * pieceSize);
-		file.write(buf);
+		RandomAccessFile file = getOrCreateFile(fileId);
+		synchronized (file) {
+			file.seek(pieceOffset(fileId, pieceId));
+			file.write(buf);
+		}
 	}
 
 	@Override

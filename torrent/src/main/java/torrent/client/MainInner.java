@@ -48,7 +48,7 @@ public class MainInner implements Runnable {
 					out,
 					sinp);
 
-			replTh = new Thread(() -> repl.startRepl());
+			replTh = new Thread(repl::startRepl);
 
 			server.start();
 			updater.start();
@@ -60,6 +60,7 @@ public class MainInner implements Runnable {
 		} catch (IOException e) {
 			out.println(e.getMessage());
 		} catch (InterruptedException e) {
+		} finally {
 			server.interrupt();
 			updater.interrupt();
 			replTh.interrupt();
@@ -77,7 +78,7 @@ public class MainInner implements Runnable {
 				filesHolder.close();
 			} catch (IOException e1) {
 				out.println("Saving client state failed");
-				out.print(e.getMessage());
+				out.print(e1.getMessage());
 			}
 		}
 	}

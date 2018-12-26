@@ -42,6 +42,7 @@ public class MainInner implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
+		} finally {
 			try {
 				cleanThread.interrupt();
 				srvThread.interrupt();

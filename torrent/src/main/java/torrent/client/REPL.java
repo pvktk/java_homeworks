@@ -107,7 +107,7 @@ public class REPL {
 	void deleteFile(int id) {
 		try {
 			downloader.stopFileDownload(id);
-		} catch (NullPointerException e) {}
+		} catch (IllegalStateException e) {}
 
 		filesHolder.deleteFile(id);
 	}
@@ -203,7 +203,7 @@ public class REPL {
 						out.println("unknown command " + command);
 					}
 					}
-				} catch (IOException | FileProblemException | NullPointerException e) {
+				} catch (IOException | FileProblemException | IllegalStateException e) {
 					out.println(e.getMessage());
 				} catch (InputMismatchException imme) {
 					in.next();

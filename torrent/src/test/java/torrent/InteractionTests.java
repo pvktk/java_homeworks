@@ -71,9 +71,10 @@ public class InteractionTests {
 				2000,
 				fh[i]));
 	}
-
+	
+	final int testFileSize = 145 * (1 << 20);
 	public void createClientFiles() throws IOException {
-		byte[] arr = new byte[15 * (1 << 20)];
+		byte[] arr = new byte[testFileSize];
 		Random r = new Random(5);
 		r.nextBytes(arr);
 		for (int i = 0; i < 2; i++) {
@@ -120,7 +121,7 @@ public class InteractionTests {
 	@Test
 	public void testBaseCommands() throws InterruptedException {
 		cl[0].start();
-
+		Thread.sleep(2000);
 		assertEquals(">", getOutput(0));
 		
 		commandTo(0, "help");
@@ -168,14 +169,14 @@ public class InteractionTests {
 		commandTo(0, "publish " + root[0].resolve("file1"));
 		getOutput(0);
 		commandTo(0, "list");
-		assertEquals("0 file1 complete 2/2\n>", getOutput(0));
+		assertEquals("0 file1 complete 15/15\n>", getOutput(0));
 		
 		commandTo(0, "publish " + root[0].resolve("file1"));
 		assertEquals("file with specified path used\n" + 
 				">", getOutput(0));
 		
 		commandTo(0, "list");
-		assertEquals("0 file1 complete 2/2\n>", getOutput(0));
+		assertEquals("0 file1 complete 15/15\n>", getOutput(0));
 	}
 
 	@Test
@@ -189,53 +190,63 @@ public class InteractionTests {
 				">", getOutput(0));
 
 		commandTo(0, "status");
-		assertEquals("0 torrentData/client0/file1 complete 2/2"
+		assertEquals("0 torrentData/client0/file1 complete 15/15"
 				+ "\n>", getOutput(0));
 
 
 		commandTo(0, "status");
-		assertEquals("0 torrentData/client0/file1 complete 2/2"
+		assertEquals("0 torrentData/client0/file1 complete 15/15"
 				+ "\n>", getOutput(0));
 
 		commandTo(0, "list");
-		assertEquals("0 file1 complete 2/2\n" + 
+		assertEquals("0 file1 complete 15/15\n" + 
 				">", getOutput(0));
 
 		cl[2].start();
 		assertEquals(">", getOutput(2));
 
 		commandTo(2, "list");
-		assertEquals("0 file1 0/2\n" + 
+		assertEquals("0 file1 0/15\n" + 
 				">", getOutput(2));
 
 		cl[0].interrupt();
 		cl[0].join();
 
 		commandTo(2, "list");
-		assertEquals("0 file1 0/2\n" + 
+		assertEquals("0 file1 0/15\n" + 
 				">", getOutput(2));
 
 		commandTo(2, "get 0 " + root[2].resolve("file1_copy"));
 		assertEquals(">", getOutput(2));
 
 		commandTo(2, "status");
-		assertEquals("0 torrentData/client2/file1_copy -> 0/2\n" + 
+		assertEquals("0 torrentData/client2/file1_copy -> 0/15\n" + 
 				">", getOutput(2));
+		
+		cl[2].interrupt();
+		cl[2].join();
+		initClient(2);
+		cl[2].start();
 
+		getOutput(2);
+		commandTo(2, "status");
+		assertEquals("0 torrentData/client2/file1_copy -> 0/15\n" + 
+				">", getOutput(2));
+		
 		initClient(0);
 		cl[0].start();
 		assertEquals(">", getOutput(0));
 
 		commandTo(0, "status");
-		assertEquals("0 torrentData/client0/file1 complete 2/2"
+		assertEquals("0 torrentData/client0/file1 complete 15/15"
 				+ "\n>", getOutput(0));
 
 		String outp;
 		do {
 			commandTo(2, "status");
 			outp = getOutput(2);
-			//System.out.println(outp);
-		} while (!"0 torrentData/client2/file1_copy complete 2/2\n>".equals(outp));
+			System.out.println(outp);
+		} while (!"0 torrentData/client2/file1_copy complete 15/15\n>".equals(outp));
 		
 		cl[2].interrupt();
 		cl[2].join();
@@ -266,6 +277,7 @@ public class InteractionTests {
 			fh[1].completePieces.put(0, pieces);
 		}
 		fh[1].fileStatus.put(0, FileStatus.Paused);
+		fh[1].fileSize.put(0, (long) testFileSize);
 		fh[1].writeMaps();
 		fh[1].load();
 
@@ -281,9 +293,9 @@ public class InteractionTests {
 		do {
 			commandTo(2, "status");
 			outp = getOutput(2);
-			//System.out.println(outp);
+			System.out.println(outp);
 			Thread.sleep(10);
-		} while (!"0 torrentData/client2/file1_copy complete 2/2\n>".equals(outp));
+		} while (!"0 torrentData/client2/file1_copy complete 15/15\n>".equals(outp));
 		
 		cl[2].interrupt();
 		cl[2].join();
@@ -301,12 +313,12 @@ public class InteractionTests {
 		getOutput(0);
 
 		commandTo(0, "status");
-		assertEquals("0 torrentData/client0/file1 complete 2/2\n>", getOutput(0));
+		assertEquals("0 torrentData/client0/file1 complete 15/15\n>", getOutput(0));
 
 		commandTo(0, "pause 0");
 		getOutput(0);
 		commandTo(0, "status");
-		assertEquals("0 torrentData/client0/file1 complete 2/2\n>", getOutput(0));
+		assertEquals("0 torrentData/client0/file1 complete 15/15\n>", getOutput(0));
 
 		cl[0].interrupt();
 		cl[0].join();
@@ -314,24 +326,24 @@ public class InteractionTests {
 		cl[2].start();
 		getOutput(2);
 		commandTo(2, "list");
-		assertEquals("0 file1 0/2\n>", getOutput(2));
+		assertEquals("0 file1 0/15\n>", getOutput(2));
 		commandTo(2, "status");
 		assertEquals("No files yet\n>", getOutput(2));
 		commandTo(2, "get 0 " + root[2].resolve("file1_copy"));
 		assertEquals(">", getOutput(2));
 		commandTo(2, "status");
-		assertEquals("0 torrentData/client2/file1_copy -> 0/2\n>", getOutput(2));
+		assertEquals("0 torrentData/client2/file1_copy -> 0/15\n>", getOutput(2));
 		
 		commandTo(2, "pause 0");
 		getOutput(2);
 		
 		commandTo(2, "status");
-		assertEquals("0 torrentData/client2/file1_copy || 0/2\n>", getOutput(2));
+		assertEquals("0 torrentData/client2/file1_copy || 0/15\n>", getOutput(2));
 		
 		commandTo(2, "resume 0");
 		getOutput(2);
 		
 		commandTo(2, "status");
-		assertEquals("0 torrentData/client2/file1_copy -> 0/2\n>", getOutput(2));
+		assertEquals("0 torrentData/client2/file1_copy -> 0/15\n>", getOutput(2));
 	}
 }
