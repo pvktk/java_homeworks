@@ -40,10 +40,6 @@ public class ServerFilesLister {
 			}
 			throw e;
 		} finally {
-			if (dinp != null)
-				dinp.close();
-			if (dout != null)
-				dout.close();
 			if (s != null)
 				s.close();
 		}
