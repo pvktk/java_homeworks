@@ -1,0 +1,216 @@
+package torrent.client;
+
+import java.io.Closeable;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class FilesHolder implements Closeable{
+
+	public final int pieceSize = 0xA00000;
+	//рабочие данные
+
+	public enum FileStatus {Complete, Downloading, Paused};
+
+	private final Map<Integer, RandomAccessFile> files = new ConcurrentHashMap<>();
+	public Map<Integer, String> filePaths = new ConcurrentHashMap<>();
+
+	public Map<Integer, FileStatus> fileStatus = new ConcurrentHashMap<>();
+	public Map<Integer, Set<Integer>> completePieces = new ConcurrentHashMap<>();
+	public Map<Integer, Long> fileSize = new ConcurrentHashMap<>();
+	//
+
+	ObjectMapper mapper = new ObjectMapper();
+	private final Path mapPath;
+	private final Path filePathsPath;
+	private final Path fileStatusPath;
+	private final Path comletePiecesPath;
+	private final Path fileSizePath;
+
+	public int numParts(int fileId) {
+		return Math.toIntExact((fileSize.get(fileId) + pieceSize - 1) / pieceSize);
+	}
+
+	public int pieceOffset(int fileId, int numPart) {
+		return pieceSize * numPart;
+	}
+
+	public int pieceLenght(int fileId, int numPart) {
+		int file_length;
+		file_length = Math.toIntExact(fileSize.get(fileId));
+		return (numPart + 1) * pieceSize <= file_length
+				? pieceSize
+						: file_length - numPart * pieceSize;
+	}
+
+	public FilesHolder(String path) throws IOException {
+		mapPath = Paths.get(path);
+		filePathsPath = mapPath.resolve("filepaths");
+		fileStatusPath = mapPath.resolve("filesStatus");
+		comletePiecesPath = mapPath.resolve("completePieces");
+		fileSizePath = mapPath.resolve("fileSizes");
+		load();
+	}
+
+	public void writeMaps() throws IOException {
+		if (!Files.exists(mapPath))
+			Files.createDirectories(mapPath);
+
+		filePathsPath.toFile().createNewFile();
+		mapper.writeValue(filePathsPath.toFile(), filePaths);
+
+		fileStatusPath.toFile().createNewFile();
+		mapper.writeValue(fileStatusPath.toFile(), fileStatus);
+
+		comletePiecesPath.toFile().createNewFile();
+		mapper.writeValue(comletePiecesPath.toFile(), completePieces);
+
+		fileSizePath.toFile().createNewFile();
+		mapper.writeValue(fileSizePath.toFile(), fileSize);
+	}
+
+	public void save() throws JsonGenerationException, JsonMappingException, IOException {
+		writeMaps();
+	}
+
+	public void load() throws JsonGenerationException, JsonMappingException, IOException {
+		if (filePathsPath.toFile().exists())
+			filePaths = mapper.readValue(filePathsPath.toFile(), new TypeReference<Map<Integer, String>>() {});
+		if (fileStatusPath.toFile().exists())
+			fileStatus = mapper.readValue(fileStatusPath.toFile(), new TypeReference<Map<Integer, FileStatus>>() {});
+		if (comletePiecesPath.toFile().exists())
+			completePieces = mapper.readValue(comletePiecesPath.toFile(), new TypeReference<Map<Integer, Set<Integer>>>() {});
+		if (fileSizePath.toFile().exists())
+			fileSize = mapper.readValue(fileSizePath.toFile(), new TypeReference<Map<Integer, Long>>() {});
+
+		if (!filePaths.keySet().equals(fileStatus.keySet())
+				|| !filePaths.keySet().equals(completePieces.keySet())
+				|| !filePaths.keySet().equals(fileSize.keySet())) {
+			throw new RuntimeException("maps key sets not equal");
+		}
+
+		for (Entry<Integer, String> ent : filePaths.entrySet()) {
+			if (!Paths.get(ent.getValue()).toFile().exists()) {
+				completePieces.get(ent.getKey()).clear();
+				fileStatus.put(ent.getKey(), FileStatus.Downloading);
+			}
+		}
+	}
+
+	public void deleteFile(int id) {
+		if (! files.containsKey(id)) {
+			throw new IllegalStateException("File isn't known.");
+		}
+		try {
+			files.get(id).close();
+		} catch (IOException e) {}
+		files.remove(id);
+		filePaths.remove(id);
+		fileStatus.remove(id);
+		completePieces.remove(id);
+		fileSize.remove(id);
+	}
+
+	public void addFileToDownload(int id, long size, String filePath) throws FileProblemException, FileNotFoundException, IOException {
+		if (files.containsKey(id)) {
+			throw new FileProblemException("id already used");
+		}
+
+		if (filePaths.containsValue(filePath)) {
+			throw new FileProblemException("file with specified path used");
+		}
+
+		filePaths.put(id, filePath);
+		completePieces.put(id, ConcurrentHashMap.newKeySet());
+		fileStatus.put(id, FileStatus.Paused);
+		fileSize.put(id, size);
+
+		writeMaps();
+	}
+
+	public void addExistingFile(int id, Path path) throws FileProblemException, FileNotFoundException, IOException {
+		if (files.containsKey(id)) {
+			throw new FileProblemException("id already used");
+		}
+
+		if (filePaths.containsValue(path.toString())) {
+			throw new FileProblemException("file with specified path used");
+		}
+
+		fileSize.put(id, path.toFile().length());
+		filePaths.put(id, path.toString());
+		fileStatus.put(id, FileStatus.Complete);
+
+		completePieces.put(id,
+				Stream.iterate(0, i -> i + 1)
+				.limit(numParts(id))
+				.collect(Collectors.toSet()));
+		writeMaps();
+	}
+
+	private RandomAccessFile getOrCreateFile(int fileId) throws IOException {
+		if (!files.containsKey(fileId)) {
+			synchronized (files) {
+				if (!files.containsKey(fileId)) {
+					Path parent = Paths.get(filePaths.get(fileId)).getParent();
+					if (parent != null) {
+						Files.createDirectories(parent);
+					}
+					RandomAccessFile res_local = new RandomAccessFile(filePaths.get(fileId), "rws");
+					if (res_local.length() == 0)
+						res_local.setLength(fileSize.get(fileId));
+					files.put(fileId, res_local);
+				}
+			}
+		}
+
+		return files.get(fileId);
+	}
+
+	public byte[] getPiece(int fileId, int pieceId) throws IOException {
+		byte[] buf = new byte[pieceLenght(fileId, pieceId)];
+		RandomAccessFile file = getOrCreateFile(fileId);
+		synchronized (file) {
+			file.seek(pieceOffset(fileId, pieceId));
+			file.readFully(buf);
+		}
+		return buf;
+	}
+
+	public void putPiece(int fileId, int pieceId, byte[] buf) throws IOException {
+		if (buf.length != pieceLenght(fileId, pieceId)) {
+			throw new IllegalStateException("Attemp to put block of incorrect size");
+		}
+		RandomAccessFile file = getOrCreateFile(fileId);
+		synchronized (file) {
+			file.seek(pieceOffset(fileId, pieceId));
+			file.write(buf);
+		}
+	}
+
+	@Override
+	public void close() throws IOException {
+		files.forEach((i, f) -> {
+			try {
+				f.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+	}
+
+}
