@@ -1,0 +1,39 @@
+
+syntax = 'proto2';
+
+package server_test;
+
+message ClientMessage {
+	repeated int32 array = 1 [packed = true];
+}
+
+enum ServerType {
+	simpleBlocking = 0;
+	middleBlocking = 1;
+	nonBlocking = 2;
+	asynchronous = 3;
+}
+	
+message MeasureRequest {
+	required int32 numberClients = 1;
+	required int32 numberArrays = 2;
+	required ServerType serverType = 3;
+}
+
+message MeasureResponse {
+	required bool measureSuccessful = 4;
+	optional int32 avgSortTime = 1;
+	optional int32 avgProcessTime = 2;
+	optional int32 avgOnClientTime = 3;
+}
+
+message MeasureParams {
+	required int32 timeDeltaMillis = 1;
+	required int32 arraySize = 2;
+	required string serverAddress = 3;
+	required int32 numberClients = 4;
+	required int32 numberArrays = 5;
+
+	required ServerType serverType = 6;
+}
+
