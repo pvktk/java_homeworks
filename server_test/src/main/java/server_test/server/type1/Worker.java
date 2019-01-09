@@ -1,9 +1,12 @@
 package server_test.server.type1;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.stream.Collectors;
+
+import com.google.protobuf.CodedInputStream;
 
 import server_test.Messages.ClientMessage;
 import server_test.server.QuadraticSorter;
@@ -16,27 +19,24 @@ public class Worker implements Runnable {
 	private final StatisticsHolder statHolder;
 
 	private final long connectionOpenedTime = System.currentTimeMillis();
-
-	public Worker(Socket clientSocket, StatisticsHolder statHolder) {
+		
+	public Worker(Socket clientSocket, StatisticsHolder statHolder) throws IOException {
 		this.clientSocket = clientSocket;
 		this.statHolder = statHolder;
-	}
-
-	private void blockUntilBytesAvaliable() throws IOException {
-		clientSocket.getInputStream().mark(1);
-		clientSocket.getInputStream().read();
-		clientSocket.getInputStream().reset();
 	}
 
 	public void run() {
 		try {
 			for (int i = 0; i < statHolder.expectedNumberArrays; i++) {
-
-				blockUntilBytesAvaliable();
+				
+				int mesSize = (new DataInputStream(clientSocket.getInputStream())).readInt();
+				byte[] mbytes = new byte[mesSize];
+				clientSocket.getInputStream().readNBytes(mbytes, 0, mesSize);
+				
 				long startRecieveTime = System.currentTimeMillis();
-
-				ClientMessage clientMessage = ClientMessage.parseFrom(clientSocket.getInputStream());
-
+				
+				ClientMessage clientMessage = ClientMessage.parseFrom(mbytes);
+				
 				boolean measureStartCorrect = statHolder.isAllClientsConnected();
 
 				int[] arrayToSort = clientMessage.getArrayList()
@@ -53,7 +53,7 @@ public class Worker implements Runnable {
 				ClientMessage.newBuilder()
 				.addAllArray(Arrays.stream(arrayToSort)
 						.boxed().collect(Collectors.toList()))
-				.build().writeTo(clientSocket.getOutputStream());
+				.build().writeDelimitedTo(clientSocket.getOutputStream());
 
 				long clientTime = System.currentTimeMillis() - startRecieveTime;
 
@@ -70,6 +70,7 @@ public class Worker implements Runnable {
 			statHolder.onClientAverageTimesSum.addAndGet(clientAverageTime);
 		} catch (IOException e) {
 			statHolder.measureFailed = true;
+			System.out.println(e.getMessage());
 		} finally {
 			try {
 				clientSocket.close();

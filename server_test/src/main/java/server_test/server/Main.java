@@ -13,6 +13,7 @@ public class Main {
 			return;
 		}
 		t.start();
+		System.out.println("Server started...");
 		t.join();
 	}
 

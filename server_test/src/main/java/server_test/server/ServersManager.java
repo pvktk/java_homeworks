@@ -8,9 +8,22 @@ import server_test.Messages.MeasureRequest;
 import server_test.Messages.MeasureResponse;
 
 public class ServersManager implements Runnable {
-	public static final int sortingPort = 8081, controlPort = 8082;
+	public static final int sortingPort = 36782, controlPort = 36783;
 
 	private final ServerSocket srv = new ServerSocket(controlPort);
+
+	private volatile TestServer ts;
+
+	private void shutDownOnDisconnect(Socket s) {
+		Thread t = new Thread( () -> {
+			try {
+				s.getInputStream().read();
+			} catch (IOException e) {
+				ts.close();
+				//System.out.println("Attemp to shutdown test server by disconnect");
+			}});
+		t.start();
+	}
 
 	public ServersManager() throws IOException {}
 
@@ -18,32 +31,41 @@ public class ServersManager implements Runnable {
 	public void run() {
 		while (true) {
 			try (Socket s = srv.accept()) {
-				MeasureRequest request = MeasureRequest.parseFrom(s.getInputStream());
+				MeasureRequest request = MeasureRequest.parseDelimitedFrom(s.getInputStream());
 
 				StatisticsHolder statHolder = new StatisticsHolder(
 						request.getNumberClients(),
 						request.getNumberArrays());
 
-				Runnable ts = TestServerFactory.getServer(request.getServerType(), statHolder);
+				ts = TestServerFactory.getServer(request.getServerType(), statHolder);
+				s.getOutputStream().write(1);
+
 				MeasureResponse response;
 				if (ts == null) {
 					response = MeasureResponse.newBuilder().setMeasureSuccessful(false)
 							.build();
 				} else {
 
+					shutDownOnDisconnect(s);
+
 					Thread t = new Thread(ts);
 					t.start();
 					t.join();
-
-					response = MeasureResponse.newBuilder()
-							.setMeasureSuccessful(true)
-							.setAvgSortTime(statHolder.getAveragetSortTime())
-							.setAvgProcessTime(statHolder.getAverageProcessTime())
-							.setAvgOnClientTime(statHolder.getAverageOnClientTime())
-							.build();
+					//System.out.println("TSThread joined");
+					if (statHolder.measureFailed) {
+						response = MeasureResponse.newBuilder()
+								.setMeasureSuccessful(false).build();
+					} else {
+						response = MeasureResponse.newBuilder()
+								.setMeasureSuccessful(true)
+								.setAvgSortTime(statHolder.getAveragetSortTime())
+								.setAvgProcessTime(statHolder.getAverageProcessTime())
+								.setAvgOnClientTime(statHolder.getAverageOnClientTime())
+								.build();
+					}
 				}
 
-				response.writeTo(s.getOutputStream());
+				response.writeDelimitedTo(s.getOutputStream());
 			} catch (IOException | InterruptedException e) {
 				continue;
 			}

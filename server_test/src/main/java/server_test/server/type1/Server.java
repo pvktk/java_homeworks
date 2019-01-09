@@ -7,10 +7,11 @@ import java.util.ArrayList;
 import java.util.List;
 import server_test.server.ServersManager;
 import server_test.server.StatisticsHolder;
+import server_test.server.TestServer;
 
-public class Server implements Runnable {
+public class Server implements TestServer {
 
-	private ServerSocket srv = new ServerSocket(ServersManager.sortingPort);
+	private final ServerSocket srv = new ServerSocket(ServersManager.sortingPort);
 
 	private List<Thread> threads = new ArrayList<>();
 
@@ -28,6 +29,7 @@ public class Server implements Runnable {
 
 			try {
 				Socket s = srv.accept();
+				statHolder.currentNumberClients.incrementAndGet();
 				Thread t = new Thread(new Worker(s, statHolder));
 				t.start();
 				threads.add(t);
@@ -37,7 +39,8 @@ public class Server implements Runnable {
 		}
 		close();
 	}
-
+	
+	@Override
 	public void close() {
 		try {
 			srv.close();

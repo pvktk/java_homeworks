@@ -7,15 +7,18 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
+import java.util.TreeMap;
+import java.util.function.Consumer;
 
-import server_test.Messages.MeasureParams;
-import server_test.Messages.MeasureParams.Builder;
+import javax.swing.JProgressBar;
 import server_test.Messages.MeasureRequest;
 import server_test.Messages.MeasureResponse;
+import server_test.Messages.ServerType;
 import server_test.server.ServersManager;
 
 public class MeasureLauncher {
@@ -26,17 +29,24 @@ public class MeasureLauncher {
 
 	private Map<Integer, MeasureResponse> results;
 
-	private MeasureParams initialParams;
+	private JProgressBar progressBar;
+
+	private int timeDeltaMillis, arraySize, numberClients, numberArrays;
+	private String serverAddress;
+	private ServerType serverType;
+
 	private int vMin, dv, vMax;
 
 	private final Path resultsPath = Paths.get("results");
+
+	private volatile Socket srv;
 
 	public void setChangingVariable(ChangingVariables var) {
 		currentSelected = var;
 	}
 
-	public void setMeasureParams(MeasureParams params) {
-		initialParams = params;
+	public ChangingVariables getChangingVariable() {
+		return currentSelected;
 	}
 
 	public void setRange(int vMin, int dv, int vMax) {
@@ -45,98 +55,193 @@ public class MeasureLauncher {
 		this.vMax = vMax;
 	}
 
-	private static MeasureResponse makeMeasure(MeasureParams params) throws IOException, InterruptedException {
-		Thread[] clients = new Thread[params.getNumberClients()];
-
-		try (Socket srv = new Socket(params.getServerAddress(), ServersManager.controlPort)) {
-
-			MeasureRequest.newBuilder()
-			.setNumberArrays(params.getNumberArrays())
-			.setNumberClients(params.getNumberClients())
-			.setServerType(params.getServerType())
-			.build().writeTo(srv.getOutputStream());
-
-			for (int i = 0; i < clients.length; i++) {
-				clients[i] = new Thread(new Client(params));
-			}
-
-			for (Thread t : clients) {
-				t.start();
-			}
-
-			for (Thread t : clients) {
-				t.join();
-			}
-
-			return MeasureResponse.parseFrom(srv.getInputStream());
-
+	public void closeSocket() {
+		if (srv != null) {
+			try {
+				srv.close();
+			} catch (IOException e) {}
 		}
 	}
 
-	private static Map<Integer, MeasureResponse> measureChange(MeasureParams params,
-			BiFunction<Builder, Integer, Builder> bf,
-			int vMin, int dv, int vMax) throws IOException, InterruptedException {
-		Map<Integer, MeasureResponse> res = new HashMap<>();
+	private MeasureResponse makeSingleMeasure() throws IOException, InterruptedException {
+		List<Client> clients = new ArrayList<>();
+		List<Thread> clientThread = new ArrayList<>();
+
+		try {
+			srv = new Socket(serverAddress, ServersManager.controlPort);
+
+			if (srv == null || Thread.interrupted()) {
+				throw new InterruptedException();
+			}
+
+			MeasureRequest.newBuilder()
+			.setNumberArrays(numberArrays)
+			.setNumberClients(numberClients)
+			.setServerType(serverType)
+			.build().writeDelimitedTo(srv.getOutputStream());
+			
+			srv.getInputStream().read();
+			
+			for (int i = 0; i < numberClients; i++) {
+				Client cl = new Client(timeDeltaMillis, numberArrays, arraySize, serverAddress);
+				clients.add(cl);
+				clientThread.add(new Thread(cl));
+			}
+
+			for (Thread t : clientThread) {
+				t.start();
+			}
+
+			for (Thread t : clientThread) {
+				t.join();
+			}
+
+			MeasureResponse res = MeasureResponse.parseDelimitedFrom(srv.getInputStream());
+			
+			if (res == null) {
+				throw new IOException("Connection failed");
+			}
+			
+			return res;
+		} finally {
+			closeSocket();
+
+			for (Thread t : clientThread) {
+				t.interrupt();
+			}
+			
+			for (Client cl : clients) {
+				cl.closeSocket();
+			}
+			
+			for (Client cl : clients) {
+				if (cl.getError() != null) {
+					throw new IllegalStateException("Some clients detected a problem: " + cl.getError());
+				}
+			}
+		}
+	}
+
+	private Map<Integer, MeasureResponse> measureChange(
+			Consumer<Integer> consumer) throws IOException, InterruptedException {
+		Map<Integer, MeasureResponse> res = new TreeMap<>();
 
 		if (vMin < 0 || dv <= 0 || vMax <= 0) {
 			throw new IllegalArgumentException();
 		}
+		progressBar.setMinimum(vMin);
+		progressBar.setMaximum(vMax);
 
 		for (int v = vMin; v <= vMax; v += dv) {
-			MeasureParams p = bf.apply(MeasureParams.newBuilder().mergeFrom(params), v).build();
+
+			consumer.accept(v);
+
 			MeasureResponse r;
 
-			r = makeMeasure(p);
-			
+			r = makeSingleMeasure();
+
 			if (!r.getMeasureSuccessful()) {
 				throw new IllegalStateException("Measure failed");
 			}
-			
+
 			res.put(v, r);
+
+			progressBar.setValue(v);
 		}
 		return res;
 	}
 
-	private static Map<Integer, MeasureResponse> measureChange(
-			MeasureParams params,
-			ChangingVariables varType,
-			int vMin, int dv, int vMax) throws IOException, InterruptedException
+	private synchronized Map<Integer, MeasureResponse> measureChange() throws IOException, InterruptedException
 	{
-		switch (varType) {
+		switch (currentSelected) {
 		case ArraySize:
-			return measureChange(params, Builder::setArraySize, vMin, dv, vMax);
+			return measureChange(i -> arraySize = i);
 		case NumberClients:
-			return measureChange(params, Builder::setNumberClients, vMin, dv, vMax);
+			return measureChange(i -> numberClients = i);
 		case TimeDelta:
-			return measureChange(params, Builder::setTimeDeltaMillis, vMin, dv, vMax);
+			return measureChange(i -> timeDeltaMillis = i);
 		default:
 			return null;
 		}
 	}
 
-	public void makeMeasure() throws IOException, InterruptedException {
-		results = measureChange(initialParams, currentSelected, vMin, dv, vMax);
+	public void makeMeasure(JProgressBar bar) throws IOException, InterruptedException {
+		this.progressBar = bar;
+		results = measureChange();
+	}
+
+	public void setTimeDeltaMillis(int timeDeltaMillis) {
+		if (timeDeltaMillis < 0)
+			throw new IllegalArgumentException();
+		this.timeDeltaMillis = timeDeltaMillis;
+	}
+
+	public void setArraySize(int arraySize) {
+		if (arraySize <= 0)
+			throw new IllegalArgumentException();
+		this.arraySize = arraySize;
+	}
+
+	public void setNumberClients(int numberClients) {
+		if (numberClients <= 0)
+			throw new IllegalArgumentException();
+		this.numberClients = numberClients;
+	}
+
+	public void setNumberArrays(int numberArrays) {
+		if (numberArrays <= 0)
+			throw new IllegalArgumentException();
+		this.numberArrays = numberArrays;
+	}
+
+	public void setServerAddress(String serverAddress) {
+		this.serverAddress = serverAddress;
+	}
+
+	public void setServerType(ServerType serverType) {
+		this.serverType = serverType;
+	}
+
+	public Map<Integer, MeasureResponse> getResults() {
+		return results;
 	}
 
 	private String data;
 	private PrintWriter getFile(String desc) throws FileNotFoundException {
-		return new PrintWriter(resultsPath.resolve(desc + "_" + data + ".txt").toFile());
+		return new PrintWriter(resultsPath
+				.resolve(serverType.toString())
+				.resolve(desc + "_" + data + ".txt").toFile());
 	}
 
 	public void saveResultsToFile() throws IOException {
 		data = (new Date()).toString();
-		Files.createDirectories(Paths.get("results"));
+		Files.createDirectories(Paths.get("results").resolve(serverType.toString()));
 
 		try (
 				PrintWriter onClientTime = new PrintWriter(getFile("avgOnClientTime"));
 				PrintWriter processTime = new PrintWriter(getFile("processTime"));
 				PrintWriter sortTime = new PrintWriter(getFile("sortingTime"));
-		) {
+				) {
 			results.forEach((i, r) -> {
 				onClientTime.println(i + " " + r.getAvgOnClientTime());
 				processTime.println(i + " " + r.getAvgProcessTime());
 				sortTime.println(i + " " + r.getAvgSortTime());
 			});
+		}
+
+		try (PrintWriter metadata = new PrintWriter(getFile("metadata"))) {
+
+			metadata.format("server type: %s\n"
+					+ "changing variable: + %s\n"
+					+ "range: min = %d, step = %d, max = %d\n"
+					+ "timeDeltaMillis = %d\n"
+					+ "array size = %d\n"
+					+ "number clients = %d\n"
+					+ "number arrays = %d\n",
+					serverType,
+					currentSelected, vMin, dv, vMax,
+					timeDeltaMillis, arraySize, numberClients, numberArrays);
+
 		}
 	}
 
