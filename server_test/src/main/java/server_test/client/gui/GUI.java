@@ -49,13 +49,15 @@ public class GUI extends JPanel {
 	private final JProgressBar progressBar;
 
 	private final List<JButton> resultUsingButtons = new ArrayList<>();
-	
+
+	private volatile boolean measureThreadCancelled = false;
 	private void cancelAction() {
 		if (measureThread != null)
 			measureThread.interrupt();
 		launcher.closeSocket();
+		measureThreadCancelled = true;
 	}
-	
+
 	public GUI() {
 		super(new GridBagLayout());
 		int currGridY = 0;
@@ -283,19 +285,24 @@ public class GUI extends JPanel {
 
 	private void startMeasureThread() {
 		measureThread = new Thread(() -> {
-
+			measureThreadCancelled = false;
 			try {
-				startMeasureButton.setEnabled(false);
-				cancelButton.setEnabled(true);
-				resultUsingButtons.forEach(b -> b.setEnabled(false));
+				try {
+					startMeasureButton.setEnabled(false);
+					cancelButton.setEnabled(true);
+					resultUsingButtons.forEach(b -> b.setEnabled(false));
 
-				launcher.setServerAddress(ipAddress.getText());
+					launcher.setServerAddress(ipAddress.getText());
 
 
-				launcher.setNumberArrays(Integer.parseInt(requestsNumber.getText()));
-				rangeFields.forEach(rf -> rf.setValuesToLauncher());
-				launcher.makeMeasure(progressBar);
-				resultUsingButtons.forEach(b -> b.setEnabled(true));
+					launcher.setNumberArrays(Integer.parseInt(requestsNumber.getText()));
+					rangeFields.forEach(rf -> rf.setValuesToLauncher());
+					launcher.makeMeasure(progressBar);
+					resultUsingButtons.forEach(b -> b.setEnabled(true));
+				} catch (Exception e) {
+					if (!measureThreadCancelled)
+						throw e;
+				}
 			} catch (NumberFormatException e){
 				JOptionPane.showMessageDialog(this, "Some integer fields incorrect", "NumberFormatException", JOptionPane.ERROR_MESSAGE);
 			} catch (IllegalArgumentException e) {
@@ -304,13 +311,13 @@ public class GUI extends JPanel {
 				JOptionPane.showMessageDialog(this, 
 						"Unknown host",
 						"An error occured", JOptionPane.ERROR_MESSAGE);
-			//} catch (SocketException e){
+				//} catch (SocketException e){
 			} catch (IOException e) {
 				JOptionPane.showMessageDialog(this, 
 						"IOException occured. " + e.getMessage() + "\nStopping",
 						"An error occured", JOptionPane.ERROR_MESSAGE);
 			} catch (IllegalStateException e){
-				
+
 				JOptionPane.showMessageDialog(this, 
 						e.getMessage() + "\nStopping",
 						"An error occured", JOptionPane.ERROR_MESSAGE);
@@ -332,21 +339,7 @@ public class GUI extends JPanel {
 		GUI contentPane = new GUI();
 		frame.setContentPane(contentPane);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		/*
-		frame.addWindowListener(new WindowAdapter() {
-			@Override
-			public void windowClosing(WindowEvent e) {
-				if (contentPane.measureThread != null) {
-					contentPane.cancelAction();
-					try {
-						contentPane.measureThread.join();
-					} catch (InterruptedException e1) {}
-				}
-				frame.dispose();
-				System.out.println("window closed");
-			}
-		});
-		*/
+
 		frame.pack();
 		frame.setVisible(true);
 	}

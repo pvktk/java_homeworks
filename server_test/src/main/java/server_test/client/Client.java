@@ -7,34 +7,32 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-import com.google.protobuf.CodedOutputStream;
-
 import server_test.Messages.ClientMessage;
 import server_test.server.ServersManager;
 
 public class Client implements Runnable {
-	
+
 	private final int timeDelta;
 	private final int nArrays;
 	private final String srvAddr;
-	
+
 	private final int[] arrayToSort, sortedArray;
-	
+
 	private volatile Socket s;
-	
+
 	private String errorMessage = null;
-	
+
 	public Client(int timeDelta, int nArrays, int arraySize, String srvAddr) {
 		this.timeDelta = timeDelta;
 		this.nArrays = nArrays;
 		this.srvAddr = srvAddr;
-		
+
 		Random rnd = new Random(3);
 		arrayToSort = rnd.ints().limit(arraySize).toArray();
 		sortedArray = arrayToSort.clone();
 		Arrays.sort(sortedArray);
 	}
-	
+
 	@Override
 	public void run() {
 		try {
@@ -44,20 +42,20 @@ public class Client implements Runnable {
 			if (s == null || Thread.interrupted()) {
 				return;
 			}
-			
+
 			for (int i = 0; i < nArrays; i++) {
 				ClientMessage request = ClientMessage.newBuilder().addAllArray(
 						Arrays
 						.stream(arrayToSort)
 						.boxed()
 						.collect(Collectors.toList()))
-				.build();
-				
+						.build();
+
 				DataOutputStream dout = new DataOutputStream(s.getOutputStream());
 				dout.writeInt(request.getSerializedSize());
 				dout.flush();
 				request.writeTo(s.getOutputStream());
-				
+
 				ClientMessage resp = ClientMessage.parseDelimitedFrom(s.getInputStream());
 				if (resp == null) {
 					errorMessage = "No response from server";
@@ -65,7 +63,7 @@ public class Client implements Runnable {
 				}
 				int[] response = resp
 						.getArrayList().stream().mapToInt(I -> I).toArray();
-				
+
 				if (!Arrays.equals(sortedArray, response)) {
 					System.err.println("Client: recieved bad array");
 					errorMessage = "Recieved array is bad";
@@ -74,7 +72,6 @@ public class Client implements Runnable {
 				Thread.sleep(timeDelta);
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
 			errorMessage = e.getMessage();
 		} catch (InterruptedException e){
 			errorMessage = "InteeruptedException caught";
@@ -85,7 +82,7 @@ public class Client implements Runnable {
 				} catch (IOException e) {}
 		}
 	}
-	
+
 	public void closeSocket() {
 		if (s != null) {
 			try {
@@ -93,9 +90,9 @@ public class Client implements Runnable {
 			} catch (IOException e) {}
 		}
 	}
-	
+
 	public String getError() {
 		return errorMessage;
 	}
-	
+
 }

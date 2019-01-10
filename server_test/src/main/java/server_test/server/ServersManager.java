@@ -19,7 +19,7 @@ public class ServersManager implements Runnable {
 			try {
 				s.getInputStream().read();
 			} catch (IOException e) {
-				ts.close();
+				ts.closeForcibly();
 				//System.out.println("Attemp to shutdown test server by disconnect");
 			}});
 		t.start();

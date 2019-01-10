@@ -1,9 +1,11 @@
-package server_test.server.type1;
+package server_test.server.type12;
 
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import com.google.protobuf.CodedInputStream;
@@ -12,7 +14,7 @@ import server_test.Messages.ClientMessage;
 import server_test.server.QuadraticSorter;
 import server_test.server.StatisticsHolder;
 
-public class Worker implements Runnable {
+public class Worker_type1 implements Runnable {
 
 	private final Socket clientSocket;
 
@@ -20,7 +22,8 @@ public class Worker implements Runnable {
 
 	private final long connectionOpenedTime = System.currentTimeMillis();
 		
-	public Worker(Socket clientSocket, StatisticsHolder statHolder) throws IOException {
+	public Worker_type1(Socket clientSocket, StatisticsHolder statHolder,
+			ExecutorService pool, List<ExecutorService> transmitters) {
 		this.clientSocket = clientSocket;
 		this.statHolder = statHolder;
 	}
@@ -30,15 +33,15 @@ public class Worker implements Runnable {
 			for (int i = 0; i < statHolder.expectedNumberArrays; i++) {
 				
 				int mesSize = (new DataInputStream(clientSocket.getInputStream())).readInt();
-				byte[] mbytes = new byte[mesSize];
-				clientSocket.getInputStream().readNBytes(mbytes, 0, mesSize);
-				
 				long startRecieveTime = System.currentTimeMillis();
-				
-				ClientMessage clientMessage = ClientMessage.parseFrom(mbytes);
 				
 				boolean measureStartCorrect = statHolder.isAllClientsConnected();
 
+				byte[] mbytes = new byte[mesSize];
+				clientSocket.getInputStream().readNBytes(mbytes, 0, mesSize);
+				
+				ClientMessage clientMessage = ClientMessage.parseFrom(mbytes);
+				
 				int[] arrayToSort = clientMessage.getArrayList()
 						.stream()
 						.mapToInt(I -> I)
