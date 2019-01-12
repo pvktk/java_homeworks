@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -95,12 +94,20 @@ public class MeasureLauncher {
 			for (Thread t : clientThread) {
 				t.join();
 			}
-
-			MeasureResponse res = MeasureResponse.parseDelimitedFrom(srv.getInputStream());
 			
-			if (res == null) {
+			int avgOnLientTime = 0;
+			for (Client c : clients) {
+				avgOnLientTime += c.getAvgTime();
+			}
+			avgOnLientTime /= clients.size();
+			
+			MeasureResponse serverRes = MeasureResponse.parseDelimitedFrom(srv.getInputStream());
+			
+			if (serverRes == null) {
 				throw new IOException("Connection failed");
 			}
+			
+			MeasureResponse res = MeasureResponse.newBuilder().mergeFrom(serverRes).setAvgOnClientTime(avgOnLientTime).build();
 			
 			return res;
 		} finally {

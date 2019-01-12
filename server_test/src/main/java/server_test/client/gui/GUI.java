@@ -5,8 +5,6 @@ import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -325,6 +323,7 @@ public class GUI extends JPanel {
 			finally {
 				startMeasureButton.setEnabled(true);
 				cancelButton.setEnabled(false);
+				progressBar.setValue(0);
 			}
 		});
 		measureThread.setDaemon(true);

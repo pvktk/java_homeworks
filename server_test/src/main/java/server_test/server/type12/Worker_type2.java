@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import server_test.Messages.ClientMessage;
@@ -19,11 +20,11 @@ public class Worker_type2 implements Runnable {
 
 	private final StatisticsHolder statHolder;
 
-	private final long connectionOpenedTime = System.currentTimeMillis();
-
 	private final ExecutorService pool;
 
 	private final ExecutorService transmitter = Executors.newSingleThreadExecutor();
+
+	private final AtomicBoolean isFinished = new AtomicBoolean();
 
 	public Worker_type2(Socket clientSocket, StatisticsHolder statHolder,
 			ExecutorService pool,
@@ -33,14 +34,23 @@ public class Worker_type2 implements Runnable {
 		this.pool = pool;
 		transmitters.add(transmitter);
 	}
-
+	
+	private void close() {
+		if (isFinished.compareAndSet(false, true)) {
+			statHolder.currentNumberClients.decrementAndGet();
+			try {
+				clientSocket.close();
+			} catch (IOException e) {}
+		}
+	}
+	
 	public void run() {
 		try {
-			for (int i = 0; i < statHolder.expectedNumberArrays; i++) {
+			while (true) {
 
 				int mesSize = (new DataInputStream(clientSocket.getInputStream())).readInt();
 				long startRecieveTime = System.currentTimeMillis();
-				
+
 				boolean measureStartCorrect = statHolder.isAllClientsConnected();
 
 				byte[] mbytes = new byte[mesSize];
@@ -55,7 +65,6 @@ public class Worker_type2 implements Runnable {
 						.mapToInt(I -> I)
 						.toArray();
 
-				int mesNum = i;
 				pool.execute(() -> {
 
 					long startSortTime = System.currentTimeMillis();
@@ -79,20 +88,7 @@ public class Worker_type2 implements Runnable {
 								statHolder.clientTimesSum.addAndGet(clientTime);
 							}
 						} catch (IOException e) {
-							statHolder.measureFailed = true;
-						} finally {
-							if (mesNum + 1 == statHolder.expectedNumberArrays) {
-								long clientAverageTime = 
-										(System.currentTimeMillis() - connectionOpenedTime) / 
-										statHolder.expectedNumberArrays;
-								statHolder.onClientAverageTimesSum.addAndGet(clientAverageTime);
-
-								try {
-									clientSocket.close();
-								} catch (IOException e) {}
-
-								statHolder.currentNumberClients.decrementAndGet();
-							}
+							close();
 						}
 					});
 				});
@@ -100,8 +96,7 @@ public class Worker_type2 implements Runnable {
 			}
 
 		} catch (IOException e) {
-			statHolder.measureFailed = true;
-			System.out.println(e.getMessage());
+			close();
 		} 
 	}
 

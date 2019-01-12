@@ -21,7 +21,9 @@ public class Client implements Runnable {
 	private volatile Socket s;
 
 	private String errorMessage = null;
-
+	
+	private int avgOnClientTime;
+	
 	public Client(int timeDelta, int nArrays, int arraySize, String srvAddr) {
 		this.timeDelta = timeDelta;
 		this.nArrays = nArrays;
@@ -36,7 +38,9 @@ public class Client implements Runnable {
 	@Override
 	public void run() {
 		try {
-
+			
+			long startTime = System.currentTimeMillis();
+			
 			s = new Socket(srvAddr, ServersManager.sortingPort);
 
 			if (s == null || Thread.interrupted()) {
@@ -71,6 +75,9 @@ public class Client implements Runnable {
 				}
 				Thread.sleep(timeDelta);
 			}
+			
+			avgOnClientTime = Math.toIntExact((System.currentTimeMillis() - startTime) / nArrays);
+			
 		} catch (IOException e) {
 			errorMessage = e.getMessage();
 		} catch (InterruptedException e){
@@ -79,7 +86,9 @@ public class Client implements Runnable {
 			if (s != null)
 				try {
 					s.close();
-				} catch (IOException e) {}
+				} catch (IOException e) {
+					errorMessage = e.getMessage();
+				}
 		}
 	}
 
@@ -93,6 +102,10 @@ public class Client implements Runnable {
 
 	public String getError() {
 		return errorMessage;
+	}
+	
+	public int getAvgTime() {
+		return avgOnClientTime;
 	}
 
 }

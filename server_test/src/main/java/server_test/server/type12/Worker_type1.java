@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
-import com.google.protobuf.CodedInputStream;
-
 import server_test.Messages.ClientMessage;
 import server_test.server.QuadraticSorter;
 import server_test.server.StatisticsHolder;
@@ -20,8 +18,6 @@ public class Worker_type1 implements Runnable {
 
 	private final StatisticsHolder statHolder;
 
-	private final long connectionOpenedTime = System.currentTimeMillis();
-		
 	public Worker_type1(Socket clientSocket, StatisticsHolder statHolder,
 			ExecutorService pool, List<ExecutorService> transmitters) {
 		this.clientSocket = clientSocket;
@@ -30,7 +26,7 @@ public class Worker_type1 implements Runnable {
 
 	public void run() {
 		try {
-			for (int i = 0; i < statHolder.expectedNumberArrays; i++) {
+			while (true) {
 				
 				int mesSize = (new DataInputStream(clientSocket.getInputStream())).readInt();
 				long startRecieveTime = System.currentTimeMillis();
@@ -67,18 +63,12 @@ public class Worker_type1 implements Runnable {
 				}
 			}
 			
-			long clientAverageTime = 
-					(System.currentTimeMillis() - connectionOpenedTime) / 
-					statHolder.expectedNumberArrays;
-			statHolder.onClientAverageTimesSum.addAndGet(clientAverageTime);
 		} catch (IOException e) {
-			statHolder.measureFailed = true;
-			System.out.println(e.getMessage());
 		} finally {
 			try {
 				clientSocket.close();
 			} catch (IOException e) {}
-
+			
 			statHolder.currentNumberClients.decrementAndGet();
 		}
 	}

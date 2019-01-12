@@ -35,7 +35,7 @@ public class Server implements TestServer {
 	public void run() {
 		try {
 			for (int i = 0; i < statHolder.expectedNumberClients; i++) {
-				if (statHolder.measureFailed) {
+				if (!statHolder.isMeasureSuccessful()) {
 					return;
 				}
 
@@ -48,7 +48,7 @@ public class Server implements TestServer {
 					t.start();
 					threads.add(t);
 				} catch (IOException e) {
-					statHolder.measureFailed = true;
+					statHolder.setMeasureFailed();
 				}
 			}
 		} finally {
@@ -71,7 +71,7 @@ public class Server implements TestServer {
 
 		try {
 			pool.shutdown();
-			pool.awaitTermination(60, TimeUnit.SECONDS);
+			pool.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
 		} catch (InterruptedException e1) {
 			return;
 		}
@@ -79,8 +79,14 @@ public class Server implements TestServer {
 		singleThreadExecs.forEach(t -> {
 			try {
 				t.shutdown();
-				t.awaitTermination(60, TimeUnit.SECONDS);
+				t.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
 			} catch (InterruptedException e) {}
+		});
+		
+		sockets.forEach(t -> {
+			try {
+				t.close();
+			} catch (IOException e) {}
 		});
 	}
 

@@ -14,6 +14,8 @@ public class TestServerFactory {
 			return new Server(statHolder, Worker_type1::new);
 		case middleBlocking:
 			return new Server(statHolder, Worker_type2::new);
+		case nonBlocking:
+			return new server_test.server.type_nonblocking.Server(statHolder);
 		default:
 			return null;
 		}

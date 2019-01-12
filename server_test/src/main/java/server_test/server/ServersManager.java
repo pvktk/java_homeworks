@@ -52,7 +52,7 @@ public class ServersManager implements Runnable {
 					t.start();
 					t.join();
 					//System.out.println("TSThread joined");
-					if (statHolder.measureFailed) {
+					if (!statHolder.isMeasureSuccessful() || statHolder.numberOfArrays.compareAndSet(0, 0)) {
 						response = MeasureResponse.newBuilder()
 								.setMeasureSuccessful(false).build();
 					} else {
@@ -60,7 +60,6 @@ public class ServersManager implements Runnable {
 								.setMeasureSuccessful(true)
 								.setAvgSortTime(statHolder.getAveragetSortTime())
 								.setAvgProcessTime(statHolder.getAverageProcessTime())
-								.setAvgOnClientTime(statHolder.getAverageOnClientTime())
 								.build();
 					}
 				}
