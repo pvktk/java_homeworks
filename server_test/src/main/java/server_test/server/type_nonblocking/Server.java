@@ -49,7 +49,7 @@ public class Server implements TestServer {
 			for (int i = 0; i < statHolder.expectedNumberClients; i++) {
 				SocketChannel s = srv.accept();
 				channels.add(s);
-				reciever.addClient(s, new Attachment(maxMessageSize, i));
+				reciever.addClient(s, new Attachment(maxMessageSize));
 
 				statHolder.currentNumberClients.incrementAndGet();
 			}
@@ -65,10 +65,8 @@ public class Server implements TestServer {
 	private void awaitClose() {
 		try {
 			recieverThread.join();
-			System.out.println("Joined recieverThread");
 			transmitThread.interrupt();
 			transmitThread.join();
-			System.out.println("Joined transmitThread");
 			pool.shutdown();
 		} catch (InterruptedException e) {}
 		try {
@@ -79,7 +77,6 @@ public class Server implements TestServer {
 	@Override
 	public void closeForcibly() {
 		try {
-			System.out.println("closeForcibly called");
 			srv.close();
 		} catch (IOException e1) {}
 		reciever.close();

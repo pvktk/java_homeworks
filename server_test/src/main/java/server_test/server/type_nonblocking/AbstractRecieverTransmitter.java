@@ -13,9 +13,9 @@ import server_test.server.StatisticsHolder;
 
 public abstract class AbstractRecieverTransmitter implements Runnable {
 
-	protected final Selector selector = Selector.open();
+	private final Selector selector = Selector.open();
 	
-	protected final ReadWriteLock selectorMonitor = new ReentrantReadWriteLock();
+	private final ReadWriteLock selectorMonitor = new ReentrantReadWriteLock();
 	
 	protected final StatisticsHolder statHolder;
 	
@@ -84,11 +84,7 @@ public abstract class AbstractRecieverTransmitter implements Runnable {
 		if (isClientClosed.compareAndSet(false, true)) {
 			statHolder.currentNumberClients.decrementAndGet();
 			statHolder.numberClosedClients.incrementAndGet();
-			//System.out.println("closing client");
 		}
-		/*System.out.format("\ncurrentNumberClients %d\n"
-				+ "numberClosedClients %d\n",
-				statHolder.currentNumberClients.get(),
-				statHolder.numberClosedClients.get());*/
+	
 	}
 }

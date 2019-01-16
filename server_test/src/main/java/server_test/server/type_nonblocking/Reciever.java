@@ -1,14 +1,11 @@
 package server_test.server.type_nonblocking;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
@@ -28,69 +25,9 @@ public class Reciever extends AbstractRecieverTransmitter{
 			StatisticsHolder statHolder,
 			Transmitter transmitter) throws IOException {
 		super(statHolder);
-		Thread wakeuper = new Thread(() ->  {
-			while (true) {
-				try {
-					Thread.sleep(20000);
-				} catch (InterruptedException e) {}
-				if (!selector.isOpen())
-					return;
-				selector.wakeup();
-				System.out.println("wakeuper wakeuped");
-			}
-		});
-		wakeuper.start();
+
 		this.pool = pool;
 		this.transmitter = transmitter;
-	}
-
-	@Override
-	public void run() {
-		try {
-			while (true) {
-
-				selectorMonitor.writeLock().lock();
-				//selectorMonitor.writeLock().unlock();
-
-				if (statHolder.numberClosedClients.get() == 
-						statHolder.expectedNumberClients) {
-					return;
-				}
-
-				System.out.println("before select in reciever. size " + selector.keys().size()
-						+ " closedClients " + statHolder.numberClosedClients.get()
-						+ " expClients " + statHolder.expectedNumberClients);
-				selector.keys().forEach(k -> {
-					System.out.print("rec " + ((Attachment) k.attachment()).inputBuffer.position());
-					ByteBuffer outputBuffer = ((Attachment) k.attachment()).outputBuffer;
-					if (outputBuffer != null) {
-						System.out.println(
-								"rec " + ((Attachment) k.attachment()).outputBuffer.remaining()
-							+	" " + ((Attachment) k.attachment()).outputBuffer.position()
-								+ " " + k.isValid() + " " +(k.isValid() && k.interestOps() == SelectionKey.OP_READ)
-								);
-					} else {
-						System.out.println("rec outputBuffer null");
-					}
-				});
-				selectorMonitor.writeLock().unlock();
-
-				selector.select();
-				System.out.println("selected");
-				Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
-
-				while (iter.hasNext()) {
-					SelectionKey key = iter.next();
-					workProcedure(key);
-
-					iter.remove();
-				}
-			}
-		} catch (IOException e1) {
-		} finally {
-			System.out.println("Closing transmitter");
-			close();
-		}
 	}
 
 	@Override
@@ -116,23 +53,19 @@ public class Reciever extends AbstractRecieverTransmitter{
 		}
 
 		if (bb.position() >= Integer.BYTES) {
-			int messageSize;
-			try {
-				messageSize = (new DataInputStream(new ByteArrayInputStream(bb.array()))).readInt();
-				System.out.println("mes size " + messageSize);
-			} catch (IOException e1) {
-				closeClient(key);
-				return;
+
+			int mark = bb.position();
+			bb.position(0);
+			int messageSize = bb.getInt();
+			bb.position(mark);
+
+			if (messageSize > 10000) {
+				System.out.println("bad message size " + messageSize);
 			}
-			System.out.println("underfull buffer " + bb.position());
-			if (bb.position() - Integer.BYTES >= messageSize - 2) {
-				System.out.println("good buffer pos " + bb.position());
+
+			if (bb.position() - Integer.BYTES >= messageSize) {
 				bb.flip();
-				if (bb.limit() == 0) {
-					System.out.println("messageSize " + messageSize +
-							" channelNum " + attach.channelNum +
-							" arrayRecStarted " + attach.arrayReceiveStarted);
-				}
+
 				bb.position(Integer.BYTES);
 				ClientMessage clMessage;
 				try {
@@ -143,9 +76,9 @@ public class Reciever extends AbstractRecieverTransmitter{
 				}
 				bb.clear();
 				pool.execute(() -> {
-					
+
 					try {
-						
+
 
 						int[] arrayToSort = clMessage.getArrayList()
 								.stream()

@@ -9,18 +9,14 @@ public class Attachment {
 	public volatile long arrayProcessStart, sortTime;
 	public volatile boolean arrayReceiveStarted = false;
 	public volatile boolean isAllClientsWorkedAtMeasure;
-	
-	public final int channelNum;
-	
-	public Attachment(int recommendedBufferSize, int channelNum) {
+
+	public Attachment(int recommendedBufferSize) {
 		inputBuffer = ByteBuffer.allocate(recommendedBufferSize);
-		this.channelNum = channelNum;
 	}
-	
+
 	public void reset() {
 		arrayReceiveStarted = false;
 		isAllClientsWorkedAtMeasure = false;
-		inputBuffer.clear();
 	}
-	
+
 }

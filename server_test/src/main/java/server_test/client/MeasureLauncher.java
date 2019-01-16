@@ -78,17 +78,15 @@ public class MeasureLauncher {
 			.setNumberClients(numberClients)
 			.setServerType(serverType)
 			.build().writeDelimitedTo(srv.getOutputStream());
-			
+
 			srv.getInputStream().read();
-			
+
 			for (int i = 0; i < numberClients; i++) {
 				Client cl = new Client(timeDeltaMillis, numberArrays, arraySize, serverAddress);
 				clients.add(cl);
 				clientThread.add(new Thread(cl));
 			}
-			
-			Client.numFinished.set(0);
-			
+
 			for (Thread t : clientThread) {
 				t.start();
 			}
@@ -96,21 +94,21 @@ public class MeasureLauncher {
 			for (Thread t : clientThread) {
 				t.join();
 			}
-			
+
 			int avgOnLientTime = 0;
 			for (Client c : clients) {
 				avgOnLientTime += c.getAvgTime();
 			}
 			avgOnLientTime /= clients.size();
-			
+
 			MeasureResponse serverRes = MeasureResponse.parseDelimitedFrom(srv.getInputStream());
-			
+
 			if (serverRes == null) {
 				throw new IOException("Connection failed");
 			}
-			
+
 			MeasureResponse res = MeasureResponse.newBuilder().mergeFrom(serverRes).setAvgOnClientTime(avgOnLientTime).build();
-			
+
 			return res;
 		} finally {
 			closeSocket();
@@ -118,11 +116,11 @@ public class MeasureLauncher {
 			for (Thread t : clientThread) {
 				t.interrupt();
 			}
-			
+
 			for (Client cl : clients) {
 				cl.closeSocket();
 			}
-			
+
 			for (Client cl : clients) {
 				if (cl.getError() != null) {
 					throw new IllegalStateException("Some clients detected a problem: " + cl.getError());
