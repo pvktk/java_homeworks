@@ -16,6 +16,8 @@ public class TestServerFactory {
 			return new Server(statHolder, Worker_type2::new);
 		case nonBlocking:
 			return new server_test.server.type_nonblocking.Server(statHolder);
+		case asynchronous:
+			return new server_test.server.async.Server(statHolder);
 		default:
 			return null;
 		}

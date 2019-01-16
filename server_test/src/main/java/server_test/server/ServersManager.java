@@ -14,13 +14,12 @@ public class ServersManager implements Runnable {
 
 	private volatile TestServer ts;
 
-	private void shutDownOnDisconnect(Socket s) {
+	private static void shutDownOnDisconnect(Socket s, TestServer ts) {
 		Thread t = new Thread( () -> {
 			try {
 				s.getInputStream().read();
 			} catch (IOException e) {
 				ts.closeForcibly();
-				//System.out.println("Attemp to shutdown test server by disconnect");
 			}});
 		t.start();
 	}
@@ -46,13 +45,17 @@ public class ServersManager implements Runnable {
 							.build();
 				} else {
 
-					shutDownOnDisconnect(s);
+					shutDownOnDisconnect(s, ts);
 
 					Thread t = new Thread(ts);
 					t.start();
 					t.join();
 					//System.out.println("TSThread joined");
-					if (!statHolder.isMeasureSuccessful() || statHolder.numberOfArrays.compareAndSet(0, 0)) {
+					if (!statHolder.isMeasureSuccessful() || statHolder.numberOfArrays.get() == 0) {
+						System.out.println("fail cause: \n"
+								+ "measureSucc " + statHolder.isMeasureSuccessful() +
+								 "numberOfArrays " + statHolder.numberOfArrays.get());
+		
 						response = MeasureResponse.newBuilder()
 								.setMeasureSuccessful(false).build();
 					} else {

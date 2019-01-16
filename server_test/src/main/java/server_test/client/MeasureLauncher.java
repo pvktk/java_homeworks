@@ -86,7 +86,9 @@ public class MeasureLauncher {
 				clients.add(cl);
 				clientThread.add(new Thread(cl));
 			}
-
+			
+			Client.numFinished.set(0);
+			
 			for (Thread t : clientThread) {
 				t.start();
 			}

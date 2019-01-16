@@ -18,7 +18,7 @@ public class Server implements TestServer {
 	private final ServerSocket srv = new ServerSocket(ServersManager.sortingPort);
 
 	private final List<Thread> threads = new ArrayList<>();
-	private final ExecutorService pool = Executors.newFixedThreadPool(4);
+	private final ExecutorService pool = Executors.newFixedThreadPool(numPoolThreads);
 	private final List<ExecutorService> singleThreadExecs = new ArrayList<>();
 	
 	private final List<Socket> sockets = new ArrayList<>();

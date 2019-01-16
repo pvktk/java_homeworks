@@ -13,9 +13,9 @@ import server_test.server.StatisticsHolder;
 
 public abstract class AbstractRecieverTransmitter implements Runnable {
 
-	private final Selector selector = Selector.open();
+	protected final Selector selector = Selector.open();
 	
-	private final ReadWriteLock selectorMonitor = new ReentrantReadWriteLock();
+	protected final ReadWriteLock selectorMonitor = new ReentrantReadWriteLock();
 	
 	protected final StatisticsHolder statHolder;
 	
@@ -46,9 +46,8 @@ public abstract class AbstractRecieverTransmitter implements Runnable {
 				selectorMonitor.writeLock().lock();
 				selectorMonitor.writeLock().unlock();
 				
-				if (statHolder.numberClosedClients.compareAndSet(
-						statHolder.expectedNumberClients,
-						statHolder.expectedNumberClients)) {
+				if (statHolder.numberClosedClients.get() == 
+						statHolder.expectedNumberClients) {
 					return;
 				}
 				selector.select();
@@ -85,6 +84,11 @@ public abstract class AbstractRecieverTransmitter implements Runnable {
 		if (isClientClosed.compareAndSet(false, true)) {
 			statHolder.currentNumberClients.decrementAndGet();
 			statHolder.numberClosedClients.incrementAndGet();
+			//System.out.println("closing client");
 		}
+		/*System.out.format("\ncurrentNumberClients %d\n"
+				+ "numberClosedClients %d\n",
+				statHolder.currentNumberClients.get(),
+				statHolder.numberClosedClients.get());*/
 	}
 }

@@ -10,6 +10,7 @@ public class StatisticsHolder {
 	
 	public final AtomicInteger currentNumberClients = new AtomicInteger(),
 			numberClosedClients = new AtomicInteger();
+	
 	public final int expectedNumberClients;
 	public final int expectedNumberArrays;
 	

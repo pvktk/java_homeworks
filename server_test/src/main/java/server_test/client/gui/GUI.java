@@ -97,6 +97,13 @@ public class GUI extends JPanel {
 				button.addActionListener((e) -> launcher.setServerType(ServerType.nonBlocking));
 				radioPanel.add(button);
 			}
+			
+			{
+				JRadioButton button = new JRadioButton("Asynchronous");
+				group.add(button);
+				button.addActionListener((e) -> launcher.setServerType(ServerType.asynchronous));
+				radioPanel.add(button);
+			}
 
 			radioPanel.add(new JSeparator());
 
