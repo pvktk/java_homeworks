@@ -13,7 +13,9 @@ public class Main {
 			return;
 		}
 		t.start();
-		System.out.println("Server started...");
+		System.out.println("Server started. Using ports "
+				+ ServersManager.controlPort + " "
+				+ ServersManager.sortingPort);
 		t.join();
 	}
 

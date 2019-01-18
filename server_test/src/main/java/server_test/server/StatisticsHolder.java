@@ -25,12 +25,12 @@ public class StatisticsHolder {
 		return currentNumberClients.compareAndSet(expectedNumberClients, expectedNumberClients);
 	}
 	
-	public int getAveragetSortTime() {
-		return Math.toIntExact(sortTimesSum.get() / numberOfArrays.get());
+	public int getAveragetSortTimeMillis() {
+		return Math.toIntExact(sortTimesSum.get() / numberOfArrays.get() / 1000000);
 	}
 	
-	public int getAverageProcessTime() {
-		return Math.toIntExact(clientTimesSum.get() / numberOfArrays.get());
+	public int getAverageProcessTimeMillis() {
+		return Math.toIntExact(clientTimesSum.get() / numberOfArrays.get() / 1000000);
 	}
 	
 	public void setMeasureFailed() {

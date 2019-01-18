@@ -82,11 +82,11 @@ public class RangeFields extends JPanel {
 	
 	public void setValuesToLauncher() throws NumberFormatException {
 		if (button.isSelected()) {
+			launcher.setChangingVariable(varType);
 			launcher.setRange(
 					Integer.parseInt(minArea.getText()),
 					Integer.parseInt(stepArea.getText()),
 					Integer.parseInt(maxArea.getText()));
-			launcher.setChangingVariable(varType);
 		} else {
 			switch (varType) {
 			case ArraySize:

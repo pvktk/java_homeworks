@@ -1,6 +1,7 @@
 package server_test.server.type_nonblocking;
 
 import java.io.IOException;
+import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -13,13 +14,14 @@ import server_test.server.StatisticsHolder;
 
 public abstract class AbstractRecieverTransmitter implements Runnable {
 
-	private final Selector selector = Selector.open();
+	private final Selector selector;
 	
 	private final ReadWriteLock selectorMonitor = new ReentrantReadWriteLock();
 	
 	protected final StatisticsHolder statHolder;
 	
 	public AbstractRecieverTransmitter(StatisticsHolder statHolder) throws IOException {
+		selector = Selector.open();
 		this.statHolder = statHolder;
 	}
 
@@ -62,6 +64,7 @@ public abstract class AbstractRecieverTransmitter implements Runnable {
 				}
 			}
 		} catch (IOException e1) {
+		} catch (ClosedSelectorException e) {
 		} finally {
 			close();
 		}

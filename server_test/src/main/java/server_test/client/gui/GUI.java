@@ -207,7 +207,7 @@ public class GUI extends JPanel {
 				panel.add(b);
 				resultUsingButtons.add(b);
 				b.addActionListener(e -> {
-					showPlot("Average sorting time", MeasureResponse::getAvgSortTime);
+					showPlot("Average sorting time, ms", MeasureResponse::getAvgSortTime);
 				});
 			}
 			{
@@ -215,7 +215,7 @@ public class GUI extends JPanel {
 				panel.add(b);
 				resultUsingButtons.add(b);
 				b.addActionListener(e -> {
-					showPlot("Average on server process time", MeasureResponse::getAvgProcessTime);
+					showPlot("Average on server process time, ms", MeasureResponse::getAvgProcessTime);
 				});
 			}
 			{
@@ -223,7 +223,7 @@ public class GUI extends JPanel {
 				panel.add(b);
 				resultUsingButtons.add(b);
 				b.addActionListener(e -> {
-					showPlot("On client average time", MeasureResponse::getAvgOnClientTime);
+					showPlot("On client average time, ms", MeasureResponse::getAvgOnClientTime);
 				});
 			}
 			{
@@ -269,7 +269,7 @@ public class GUI extends JPanel {
 			xAxisTitle = "number of clients";
 			break;
 		case TimeDelta:
-			xAxisTitle = "time delta";
+			xAxisTitle = "time delta, ms";
 			break;
 		default:
 			xAxisTitle = "";
@@ -309,9 +309,9 @@ public class GUI extends JPanel {
 						throw e;
 				}
 			} catch (NumberFormatException e){
-				JOptionPane.showMessageDialog(this, "Some integer fields incorrect", "NumberFormatException", JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(this, "Some integer fields are incorrect", "NumberFormatException", JOptionPane.ERROR_MESSAGE);
 			} catch (IllegalArgumentException e) {
-				JOptionPane.showMessageDialog(this, "Some integer values are incorrect", "NumberArgumentException", JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(this, "Some integer values are incorrect " + e.getMessage(), "NumberArgumentException", JOptionPane.ERROR_MESSAGE);
 			} catch (UnknownHostException e) {
 				JOptionPane.showMessageDialog(this, 
 						"Unknown host",
@@ -322,7 +322,6 @@ public class GUI extends JPanel {
 						"IOException occured. " + e.getMessage() + "\nStopping",
 						"An error occured", JOptionPane.ERROR_MESSAGE);
 			} catch (IllegalStateException e){
-
 				JOptionPane.showMessageDialog(this, 
 						e.getMessage() + "\nStopping",
 						"An error occured", JOptionPane.ERROR_MESSAGE);

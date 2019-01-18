@@ -38,7 +38,7 @@ public class Reciever extends AbstractRecieverTransmitter{
 
 		if (!attach.arrayReceiveStarted) {
 			attach.arrayReceiveStarted = true;
-			attach.arrayProcessStart = System.currentTimeMillis();
+			attach.arrayProcessStart = System.nanoTime();
 			attach.isAllClientsWorkedAtMeasure = statHolder.isAllClientsConnected();
 		}
 
@@ -58,10 +58,6 @@ public class Reciever extends AbstractRecieverTransmitter{
 			bb.position(0);
 			int messageSize = bb.getInt();
 			bb.position(mark);
-
-			if (messageSize > 10000) {
-				System.out.println("bad message size " + messageSize);
-			}
 
 			if (bb.position() - Integer.BYTES >= messageSize) {
 				bb.flip();
@@ -85,11 +81,11 @@ public class Reciever extends AbstractRecieverTransmitter{
 								.mapToInt(I -> I)
 								.toArray();
 
-						long sortStart = System.currentTimeMillis();
+						long sortStart = System.nanoTime();
 
 						QuadraticSorter.sort(arrayToSort);
 
-						attach.sortTime = System.currentTimeMillis() - sortStart;
+						attach.sortTime = System.nanoTime() - sortStart;
 
 						ByteArrayOutputStream baos = new ByteArrayOutputStream();
 

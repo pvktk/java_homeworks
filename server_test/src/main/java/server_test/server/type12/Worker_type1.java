@@ -29,7 +29,7 @@ public class Worker_type1 implements Runnable {
 			while (true) {
 				
 				int mesSize = (new DataInputStream(clientSocket.getInputStream())).readInt();
-				long startRecieveTime = System.currentTimeMillis();
+				long startRecieveTime = System.nanoTime();
 				
 				boolean measureStartCorrect = statHolder.isAllClientsConnected();
 
@@ -43,18 +43,18 @@ public class Worker_type1 implements Runnable {
 						.mapToInt(I -> I)
 						.toArray();
 
-				long startSortTime = System.currentTimeMillis();
+				long startSortTime = System.nanoTime();
 
 				QuadraticSorter.sort(arrayToSort);
 
-				long sortTime = System.currentTimeMillis() - startSortTime;
+				long sortTime = System.nanoTime() - startSortTime;
 
 				ClientMessage.newBuilder()
 				.addAllArray(Arrays.stream(arrayToSort)
 						.boxed().collect(Collectors.toList()))
 				.build().writeDelimitedTo(clientSocket.getOutputStream());
 
-				long clientTime = System.currentTimeMillis() - startRecieveTime;
+				long clientTime = System.nanoTime() - startRecieveTime;
 
 				if (measureStartCorrect && statHolder.isAllClientsConnected()) {
 					statHolder.numberOfArrays.incrementAndGet();

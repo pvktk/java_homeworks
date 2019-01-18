@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -22,6 +21,7 @@ import server_test.server.ServersManager;
 
 public class MeasureLauncher {
 
+	public final int maxArraySize = 30000;
 	public enum ChangingVariables {ArraySize, NumberClients, TimeDelta};
 
 	private ChangingVariables currentSelected = null;
@@ -52,6 +52,12 @@ public class MeasureLauncher {
 		this.vMin = vMin;
 		this.dv = dv;
 		this.vMax = vMax;
+		if (vMin < 0 || dv <= 0 || vMax < vMin) {
+			throw new IllegalArgumentException("Range incorrect");
+		}
+		if (currentSelected != ChangingVariables.TimeDelta && vMin == 0) {
+			throw new IllegalArgumentException("Range incorrect");
+		}
 	}
 
 	public void closeSocket() {
@@ -141,6 +147,10 @@ public class MeasureLauncher {
 
 		for (int v = vMin; v <= vMax; v += dv) {
 
+			if (currentSelected == ChangingVariables.ArraySize && v > maxArraySize) {
+				throw new IllegalStateException("Array too large");
+			}
+
 			consumer.accept(v);
 
 			MeasureResponse r;
@@ -185,7 +195,9 @@ public class MeasureLauncher {
 
 	public void setArraySize(int arraySize) {
 		if (arraySize <= 0)
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException(". too small array size");
+		if (arraySize > maxArraySize)
+			throw new IllegalArgumentException(". too big array size");
 		this.arraySize = arraySize;
 	}
 
@@ -213,21 +225,20 @@ public class MeasureLauncher {
 		return results;
 	}
 
-	private String data;
 	private PrintWriter getFile(String desc) throws FileNotFoundException {
 		return new PrintWriter(resultsPath
-				.resolve(serverType.toString())
-				.resolve(desc + "_" + data + ".txt").toFile());
+				.resolve(serverType.getNumber() +
+						"" + currentSelected.ordinal()
+						+ desc + ".txt").toFile());
 	}
 
 	public void saveResultsToFile() throws IOException {
-		data = (new Date()).toString();
-		Files.createDirectories(Paths.get("results").resolve(serverType.toString()));
+		Files.createDirectories(Paths.get("results"));
 
 		try (
-				PrintWriter onClientTime = new PrintWriter(getFile("avgOnClientTime"));
-				PrintWriter processTime = new PrintWriter(getFile("processTime"));
-				PrintWriter sortTime = new PrintWriter(getFile("sortingTime"));
+				PrintWriter onClientTime = new PrintWriter(getFile("0"));
+				PrintWriter processTime = new PrintWriter(getFile("1"));
+				PrintWriter sortTime = new PrintWriter(getFile("2"));
 				) {
 			results.forEach((i, r) -> {
 				onClientTime.println(i + " " + r.getAvgOnClientTime());
@@ -236,7 +247,7 @@ public class MeasureLauncher {
 			});
 		}
 
-		try (PrintWriter metadata = new PrintWriter(getFile("metadata"))) {
+		try (PrintWriter metadata = new PrintWriter(getFile("_metadata"))) {
 
 			metadata.format("server type: %s\n"
 					+ "changing variable: + %s\n"

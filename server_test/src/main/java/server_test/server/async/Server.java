@@ -18,6 +18,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import server_test.Messages.ClientMessage;
 import server_test.server.QuadraticSorter;
 import server_test.server.ServersManager;
@@ -94,7 +96,7 @@ public class Server implements TestServer {
 
 							if (!arrayReceiveStarted) {
 								arrayReceiveStarted = true;
-								arrayProcessStart = System.currentTimeMillis();
+								arrayProcessStart = System.nanoTime();
 								isAllClientsWorkedAtMeasure = statHolder.isAllClientsConnected();
 							}
 
@@ -114,26 +116,32 @@ public class Server implements TestServer {
 
 							if (readBuffer.position() - Integer.BYTES >= messageSize) {
 
+								readBuffer.flip();
+
+								readBuffer.position(Integer.BYTES);
+
+								ClientMessage clMessage = null;
+								try {
+									clMessage = ClientMessage.parseFrom(readBuffer);
+								} catch (InvalidProtocolBufferException e1) {
+									closeClient(chan);
+								}
+								readBuffer.clear();
+								arrayReceiveStarted = false;
+								int[] arrayToSort = clMessage.getArrayList()
+										.stream()
+										.mapToInt(I -> I)
+										.toArray();
+								
 								pool.execute(() -> {
 
-									readBuffer.flip();
-
-									readBuffer.position(Integer.BYTES);
-
 									try {
-										ClientMessage clMessage = ClientMessage.parseFrom(readBuffer);
-										readBuffer.clear();
-
-										int[] arrayToSort = clMessage.getArrayList()
-												.stream()
-												.mapToInt(I -> I)
-												.toArray();
-
-										long sortStart = System.currentTimeMillis();
+										
+										long sortStart = System.nanoTime();
 
 										QuadraticSorter.sort(arrayToSort);
 
-										sortTime = System.currentTimeMillis() - sortStart;
+										sortTime = System.nanoTime() - sortStart;
 
 										ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
@@ -149,7 +157,7 @@ public class Server implements TestServer {
 											@Override
 											public void completed(Integer result, Object attachment) {
 												if (!outputBuffer.hasRemaining()) {
-													long processTime = System.currentTimeMillis() - arrayProcessStart;
+													long processTime = System.nanoTime() - arrayProcessStart;
 													if (isAllClientsWorkedAtMeasure && statHolder.isAllClientsConnected()) {
 														statHolder.numberOfArrays.incrementAndGet();
 														statHolder.sortTimesSum.addAndGet(sortTime);

@@ -37,10 +37,9 @@ public class Client implements Runnable {
 
 	@Override
 	public void run() {
-		int i = 0;
 		try {
 
-			long startTime = System.currentTimeMillis();
+			long startTime = System.nanoTime();
 
 			s = new Socket(srvAddr, ServersManager.sortingPort);
 
@@ -49,7 +48,7 @@ public class Client implements Runnable {
 			}
 
 
-			for (i = 0; i < nArrays; i++) {
+			for (int i = 0; i < nArrays; i++) {
 				ClientMessage request = ClientMessage.newBuilder().addAllArray(
 						Arrays
 						.stream(arrayToSort)
@@ -81,7 +80,7 @@ public class Client implements Runnable {
 				Thread.sleep(timeDelta);
 			}
 
-			avgOnClientTime = Math.toIntExact((System.currentTimeMillis() - startTime) / nArrays);
+			avgOnClientTime = Math.toIntExact((System.nanoTime() - startTime) / 1000000 / nArrays);
 
 		} catch (IOException e) {
 			errorMessage = e.getMessage();

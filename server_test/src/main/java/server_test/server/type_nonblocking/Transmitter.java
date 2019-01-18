@@ -4,9 +4,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import server_test.server.StatisticsHolder;
 
 public class Transmitter extends AbstractRecieverTransmitter {
@@ -30,7 +27,7 @@ public class Transmitter extends AbstractRecieverTransmitter {
 		}
 
 		if (!bb.hasRemaining()) {
-			long processTime = System.currentTimeMillis() - attach.arrayProcessStart;
+			long processTime = System.nanoTime() - attach.arrayProcessStart;
 			key.cancel();
 			if (attach.isAllClientsWorkedAtMeasure && statHolder.isAllClientsConnected()) {
 				statHolder.numberOfArrays.incrementAndGet();

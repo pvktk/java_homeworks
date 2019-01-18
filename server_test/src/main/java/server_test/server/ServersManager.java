@@ -17,7 +17,10 @@ public class ServersManager implements Runnable {
 	private static void shutDownOnDisconnect(Socket s, TestServer ts) {
 		Thread t = new Thread( () -> {
 			try {
-				s.getInputStream().read();
+				int res = s.getInputStream().read();
+				if (res == -1) {
+					ts.closeForcibly();
+				}
 			} catch (IOException e) {
 				ts.closeForcibly();
 			}});
@@ -50,19 +53,15 @@ public class ServersManager implements Runnable {
 					Thread t = new Thread(ts);
 					t.start();
 					t.join();
-					//System.out.println("TSThread joined");
 					if (!statHolder.isMeasureSuccessful() || statHolder.numberOfArrays.get() == 0) {
-						System.out.println("fail cause: \n"
-								+ "measureSucc " + statHolder.isMeasureSuccessful() +
-								 "numberOfArrays " + statHolder.numberOfArrays.get());
 		
 						response = MeasureResponse.newBuilder()
 								.setMeasureSuccessful(false).build();
 					} else {
 						response = MeasureResponse.newBuilder()
 								.setMeasureSuccessful(true)
-								.setAvgSortTime(statHolder.getAveragetSortTime())
-								.setAvgProcessTime(statHolder.getAverageProcessTime())
+								.setAvgSortTime(statHolder.getAveragetSortTimeMillis())
+								.setAvgProcessTime(statHolder.getAverageProcessTimeMillis())
 								.build();
 					}
 				}
