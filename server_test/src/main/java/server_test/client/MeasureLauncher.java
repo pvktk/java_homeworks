@@ -24,7 +24,7 @@ public class MeasureLauncher {
 	public final int maxArraySize = 30000;
 	public enum ChangingVariables {ArraySize, NumberClients, TimeDelta};
 
-	private ChangingVariables currentSelected = null;
+	private ChangingVariables currentSelectedChangingVariable = null;
 
 	private Map<Integer, MeasureResponse> results;
 
@@ -41,11 +41,11 @@ public class MeasureLauncher {
 	private volatile Socket srv;
 
 	public void setChangingVariable(ChangingVariables var) {
-		currentSelected = var;
+		currentSelectedChangingVariable = var;
 	}
 
 	public ChangingVariables getChangingVariable() {
-		return currentSelected;
+		return currentSelectedChangingVariable;
 	}
 
 	public void setRange(int vMin, int dv, int vMax) {
@@ -55,7 +55,7 @@ public class MeasureLauncher {
 		if (vMin < 0 || dv <= 0 || vMax < vMin) {
 			throw new IllegalArgumentException("Range incorrect");
 		}
-		if (currentSelected != ChangingVariables.TimeDelta && vMin == 0) {
+		if (currentSelectedChangingVariable != ChangingVariables.TimeDelta && vMin == 0) {
 			throw new IllegalArgumentException("Range incorrect");
 		}
 	}
@@ -147,7 +147,7 @@ public class MeasureLauncher {
 
 		for (int v = vMin; v <= vMax; v += dv) {
 
-			if (currentSelected == ChangingVariables.ArraySize && v > maxArraySize) {
+			if (currentSelectedChangingVariable == ChangingVariables.ArraySize && v > maxArraySize) {
 				throw new IllegalStateException("Array too large");
 			}
 
@@ -170,7 +170,7 @@ public class MeasureLauncher {
 
 	private synchronized Map<Integer, MeasureResponse> measureChange() throws IOException, InterruptedException
 	{
-		switch (currentSelected) {
+		switch (currentSelectedChangingVariable) {
 		case ArraySize:
 			return measureChange(i -> arraySize = i);
 		case NumberClients:
@@ -228,7 +228,7 @@ public class MeasureLauncher {
 	private PrintWriter getFile(String desc) throws FileNotFoundException {
 		return new PrintWriter(resultsPath
 				.resolve(serverType.getNumber() +
-						"" + currentSelected.ordinal()
+						"" + currentSelectedChangingVariable.ordinal()
 						+ desc + ".txt").toFile());
 	}
 
@@ -257,7 +257,7 @@ public class MeasureLauncher {
 					+ "number clients = %d\n"
 					+ "number arrays = %d\n",
 					serverType,
-					currentSelected, vMin, dv, vMax,
+					currentSelectedChangingVariable, vMin, dv, vMax,
 					timeDeltaMillis, arraySize, numberClients, numberArrays);
 
 		}
