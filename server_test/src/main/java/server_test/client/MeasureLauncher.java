@@ -189,27 +189,27 @@ public class MeasureLauncher {
 
 	public void setTimeDeltaMillis(int timeDeltaMillis) {
 		if (timeDeltaMillis < 0)
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("time delta < 0");
 		this.timeDeltaMillis = timeDeltaMillis;
 	}
 
 	public void setArraySize(int arraySize) {
 		if (arraySize <= 0)
-			throw new IllegalArgumentException(". too small array size");
+			throw new IllegalArgumentException("too small array size");
 		if (arraySize > maxArraySize)
-			throw new IllegalArgumentException(". too big array size");
+			throw new IllegalArgumentException("too big array size");
 		this.arraySize = arraySize;
 	}
 
 	public void setNumberClients(int numberClients) {
 		if (numberClients <= 0)
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("number clients <= 0");
 		this.numberClients = numberClients;
 	}
 
 	public void setNumberArrays(int numberArrays) {
 		if (numberArrays <= 0)
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("number of requests <= 0");
 		this.numberArrays = numberArrays;
 	}
 

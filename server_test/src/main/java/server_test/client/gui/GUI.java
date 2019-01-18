@@ -309,9 +309,9 @@ public class GUI extends JPanel {
 						throw e;
 				}
 			} catch (NumberFormatException e){
-				JOptionPane.showMessageDialog(this, "Some integer fields are incorrect", "NumberFormatException", JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(this, "Some integer fields are incorrect. ", "NumberFormatException", JOptionPane.ERROR_MESSAGE);
 			} catch (IllegalArgumentException e) {
-				JOptionPane.showMessageDialog(this, "Some integer values are incorrect " + e.getMessage(), "NumberArgumentException", JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(this, "Some integer values are incorrect. " + e.getMessage(), "NumberArgumentException", JOptionPane.ERROR_MESSAGE);
 			} catch (UnknownHostException e) {
 				JOptionPane.showMessageDialog(this, 
 						"Unknown host",
