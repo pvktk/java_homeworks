@@ -1,0 +1,7 @@
+server type: nonBlocking
+changing variable: + ArraySize
+range: min = 1000, step = 1000, max = 15000
+timeDeltaMillis = 0
+array size = 15000
+number clients = 12
+number arrays = 30

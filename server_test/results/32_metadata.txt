@@ -1,0 +1,7 @@
+server type: asynchronous
+changing variable: + TimeDelta
+range: min = 0, step = 6, max = 200
+timeDeltaMillis = 198
+array size = 3000
+number clients = 10
+number arrays = 30

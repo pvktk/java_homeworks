@@ -1,0 +1,7 @@
+server type: simpleBlocking
+changing variable: + NumberClients
+range: min = 1, step = 1, max = 20
+timeDeltaMillis = 2
+array size = 5000
+number clients = 20
+number arrays = 30
