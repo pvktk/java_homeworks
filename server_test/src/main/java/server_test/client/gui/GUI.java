@@ -97,7 +97,7 @@ public class GUI extends JPanel {
 				button.addActionListener((e) -> launcher.setServerType(ServerType.nonBlocking));
 				radioPanel.add(button);
 			}
-			
+
 			{
 				JRadioButton button = new JRadioButton("Asynchronous");
 				group.add(button);
@@ -281,6 +281,7 @@ public class GUI extends JPanel {
 				ChartFactory.createXYLineChart("Load testing", xAxisTitle, yAxisTitle, dataset));
 
 		JFrame chartFrame = new JFrame();
+		chartFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
 		chartFrame.add(chartPanel);
 		chartFrame.pack();
