@@ -35,7 +35,12 @@ public class Reciever extends AbstractRecieverTransmitter{
 		SocketChannel chan = (SocketChannel) key.channel();
 		Attachment attach = (Attachment) key.attachment();
 		ByteBuffer bb = attach.inputBuffer;
-
+		
+		if (!bb.hasRemaining()) {
+			closeClient(key);
+			return;
+		}
+		
 		if (!attach.arrayReceiveStarted) {
 			attach.arrayReceiveStarted = true;
 			attach.arrayProcessStart = System.nanoTime();
@@ -73,22 +78,20 @@ public class Reciever extends AbstractRecieverTransmitter{
 				bb.clear();
 				pool.execute(() -> {
 
+					int[] arrayToSort = clMessage.getArrayList()
+							.stream()
+							.mapToInt(I -> I)
+							.toArray();
+
+					long sortStart = System.nanoTime();
+
+					QuadraticSorter.sort(arrayToSort);
+
+					attach.sortTime = System.nanoTime() - sortStart;
+
+					ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
 					try {
-
-
-						int[] arrayToSort = clMessage.getArrayList()
-								.stream()
-								.mapToInt(I -> I)
-								.toArray();
-
-						long sortStart = System.nanoTime();
-
-						QuadraticSorter.sort(arrayToSort);
-
-						attach.sortTime = System.nanoTime() - sortStart;
-
-						ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
 						ClientMessage.newBuilder()
 						.addAllArray(Arrays.stream(arrayToSort)
 								.boxed().collect(Collectors.toList()))
@@ -99,10 +102,11 @@ public class Reciever extends AbstractRecieverTransmitter{
 						transmitter.addClient(
 								chan,
 								attach);
-
 					} catch (IOException e) {
-						statHolder.setMeasureFailed();
+						closeClient(key);
+						return;
 					}
+
 				});
 			}
 		}

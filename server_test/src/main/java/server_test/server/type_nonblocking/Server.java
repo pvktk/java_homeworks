@@ -55,8 +55,6 @@ public class Server implements TestServer {
 			}
 
 		} catch (IOException e) {
-			e.printStackTrace();
-			statHolder.setMeasureFailed();
 		} finally {
 			awaitClose();
 		}

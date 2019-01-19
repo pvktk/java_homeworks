@@ -20,13 +20,13 @@ public class Server implements TestServer {
 	private final List<Thread> threads = new ArrayList<>();
 	private final ExecutorService pool = Executors.newFixedThreadPool(numPoolThreads);
 	private final List<ExecutorService> singleThreadExecs = new ArrayList<>();
-	
+
 	private final List<Socket> sockets = new ArrayList<>();
-	
+
 	private final StatisticsHolder statHolder;
-	
+
 	private final WorkerProvider wp;
-	
+
 	public Server(StatisticsHolder statHolder, WorkerProvider wp) throws IOException {
 		this.statHolder = statHolder;
 		this.wp = wp;
@@ -35,22 +35,16 @@ public class Server implements TestServer {
 	public void run() {
 		try {
 			for (int i = 0; i < statHolder.expectedNumberClients; i++) {
-				if (!statHolder.isMeasureSuccessful()) {
-					return;
-				}
 
-				try {
-					Socket s = srv.accept();
-					statHolder.currentNumberClients.incrementAndGet();
-					sockets.add(s);
-									
-					Thread t = new Thread(wp.getWorker(s, statHolder, pool, singleThreadExecs));
-					t.start();
-					threads.add(t);
-				} catch (IOException e) {
-					statHolder.setMeasureFailed();
-				}
+				Socket s = srv.accept();
+				statHolder.currentNumberClients.incrementAndGet();
+				sockets.add(s);
+
+				Thread t = new Thread(wp.getWorker(s, statHolder, pool, singleThreadExecs));
+				t.start();
+				threads.add(t);
 			}
+		} catch (IOException e) {
 		} finally {
 			awaitClosing();
 		}
@@ -82,7 +76,7 @@ public class Server implements TestServer {
 				t.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
 			} catch (InterruptedException e) {}
 		});
-		
+
 		sockets.forEach(t -> {
 			try {
 				t.close();
@@ -93,10 +87,15 @@ public class Server implements TestServer {
 	@Override
 	public void closeForcibly() {
 		pool.shutdownNow();
+
 		sockets.forEach(t -> {
 			try {
 				t.close();
 			} catch (IOException e) {}
+		});
+
+		singleThreadExecs.forEach(e -> {
+			e.shutdownNow();
 		});
 	}
 

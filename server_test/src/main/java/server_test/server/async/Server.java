@@ -89,6 +89,7 @@ public class Server implements TestServer {
 						volatile boolean arrayReceiveStarted, isAllClientsWorkedAtMeasure;
 						@Override
 						public void completed(Integer result, Object attachment) {
+							
 							if (result == -1) {
 								closeClient(chan);
 								return;
@@ -100,6 +101,10 @@ public class Server implements TestServer {
 								isAllClientsWorkedAtMeasure = statHolder.isAllClientsConnected();
 							}
 
+							if (!readBuffer.hasRemaining()) {
+								closeClient(chan);
+								return;
+							}
 
 							if (readBuffer.position() < Integer.BYTES) {
 								chan.read(readBuffer, null, this);
@@ -125,6 +130,7 @@ public class Server implements TestServer {
 									clMessage = ClientMessage.parseFrom(readBuffer);
 								} catch (InvalidProtocolBufferException e1) {
 									closeClient(chan);
+									return;
 								}
 								readBuffer.clear();
 								arrayReceiveStarted = false;
@@ -181,7 +187,6 @@ public class Server implements TestServer {
 							}
 
 							chan.read(readBuffer, null, this);
-
 						}
 
 						@Override
