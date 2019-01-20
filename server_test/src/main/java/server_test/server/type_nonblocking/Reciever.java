@@ -34,13 +34,9 @@ public class Reciever extends AbstractRecieverTransmitter{
 	public void workProcedure(SelectionKey key) {
 		SocketChannel chan = (SocketChannel) key.channel();
 		Attachment attach = (Attachment) key.attachment();
-		ByteBuffer bb = attach.inputBuffer;
-		
-		if (!bb.hasRemaining()) {
-			closeClient(key);
-			return;
-		}
-		
+		ByteBuffer readBuffer = attach.inputBuffer;
+		ByteBuffer sizeBuffer = attach.sizeBuffer;
+
 		if (!attach.arrayReceiveStarted) {
 			attach.arrayReceiveStarted = true;
 			attach.arrayProcessStart = System.nanoTime();
@@ -48,7 +44,7 @@ public class Reciever extends AbstractRecieverTransmitter{
 		}
 
 		try {
-			if (chan.read(bb) < 0) {
+			if (chan.read(new ByteBuffer[]{sizeBuffer, readBuffer}) < 0) {
 				closeClient(key);
 				return;
 			}
@@ -57,25 +53,30 @@ public class Reciever extends AbstractRecieverTransmitter{
 			return;
 		}
 
-		if (bb.position() >= Integer.BYTES) {
+		if (!sizeBuffer.hasRemaining()) {
+			
+			sizeBuffer.flip();
+			int messageSize = sizeBuffer.getInt();
 
-			int mark = bb.position();
-			bb.position(0);
-			int messageSize = bb.getInt();
-			bb.position(mark);
+			if (messageSize > readBuffer.capacity()) {
+				closeClient(key);
+				return;
+			}
 
-			if (bb.position() - Integer.BYTES >= messageSize) {
-				bb.flip();
+			readBuffer.limit(messageSize);
 
-				bb.position(Integer.BYTES);
+			if (!readBuffer.hasRemaining()) {
+				readBuffer.flip();
+
 				ClientMessage clMessage;
 				try {
-					clMessage = ClientMessage.parseFrom(bb);
+					clMessage = ClientMessage.parseFrom(readBuffer);
 				} catch (InvalidProtocolBufferException e1) {
 					closeClient(key);
 					return;
 				}
-				bb.clear();
+				readBuffer.clear();
+				sizeBuffer.clear();
 				pool.execute(() -> {
 
 					int[] arrayToSort = clMessage.getArrayList()

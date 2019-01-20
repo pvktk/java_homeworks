@@ -1,8 +1,6 @@
 package server_test.server.async;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -71,9 +69,12 @@ public class Server implements TestServer {
 					}
 
 					final AtomicBoolean isClientClosed = new AtomicBoolean();
+					final ByteBuffer sizeBuffer = ByteBuffer.allocate(Integer.BYTES);
 					final ByteBuffer readBuffer = ByteBuffer.allocate(maxMessageSize);
+					final ByteBuffer[] buffers = new ByteBuffer[] {sizeBuffer, readBuffer};
 
-					chan.read(readBuffer, null, new CompletionHandler<Integer, Object>() {
+					chan.read(buffers, 0, 2, Long.MAX_VALUE, TimeUnit.SECONDS,
+							null, new CompletionHandler<Long, Object>() {
 
 						void closeClient(AsynchronousSocketChannel chan) {
 							try {
@@ -88,8 +89,8 @@ public class Server implements TestServer {
 						long sortTime, arrayProcessStart;
 						volatile boolean arrayReceiveStarted, isAllClientsWorkedAtMeasure;
 						@Override
-						public void completed(Integer result, Object attachment) {
-							
+						public void completed(Long result, Object attachment) {
+
 							if (result == -1) {
 								closeClient(chan);
 								return;
@@ -101,29 +102,26 @@ public class Server implements TestServer {
 								isAllClientsWorkedAtMeasure = statHolder.isAllClientsConnected();
 							}
 
-							if (!readBuffer.hasRemaining()) {
-								closeClient(chan);
-								return;
-							}
-
-							if (readBuffer.position() < Integer.BYTES) {
-								chan.read(readBuffer, null, this);
-								return;
-							}
-
 							int messageSize;
-							try {
-								messageSize = (new DataInputStream(new ByteArrayInputStream(readBuffer.array()))).readInt();
-							} catch (IOException e) {
+							if (!sizeBuffer.hasRemaining()) {
+								sizeBuffer.flip();
+								messageSize = sizeBuffer.getInt();
+							} else {
+								chan.read(buffers, 0, 2, Long.MAX_VALUE, TimeUnit.SECONDS,
+										null, this);
+								return;
+							}
+
+							if (messageSize > readBuffer.capacity()) {
 								closeClient(chan);
 								return;
 							}
 
-							if (readBuffer.position() - Integer.BYTES >= messageSize) {
+							readBuffer.limit(messageSize);
+
+							if (!readBuffer.hasRemaining()) {
 
 								readBuffer.flip();
-
-								readBuffer.position(Integer.BYTES);
 
 								ClientMessage clMessage = null;
 								try {
@@ -132,17 +130,18 @@ public class Server implements TestServer {
 									closeClient(chan);
 									return;
 								}
+								sizeBuffer.clear();
 								readBuffer.clear();
 								arrayReceiveStarted = false;
 								int[] arrayToSort = clMessage.getArrayList()
 										.stream()
 										.mapToInt(I -> I)
 										.toArray();
-								
+
 								pool.execute(() -> {
 
 									try {
-										
+
 										long sortStart = System.nanoTime();
 
 										QuadraticSorter.sort(arrayToSort);
@@ -186,7 +185,8 @@ public class Server implements TestServer {
 								});
 							}
 
-							chan.read(readBuffer, null, this);
+							chan.read(buffers, 0, 2, Long.MAX_VALUE, TimeUnit.SECONDS,
+									null, this);
 						}
 
 						@Override
