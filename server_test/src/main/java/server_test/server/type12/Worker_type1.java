@@ -57,7 +57,7 @@ public class Worker_type1 implements Runnable {
 				long clientTime = System.nanoTime() - startRecieveTime;
 
 				if (measureStartCorrect && statHolder.isAllClientsConnected()) {
-					statHolder.numberOfArrays.incrementAndGet();
+					statHolder.fullNumberOfCorrectArrays.incrementAndGet();
 					statHolder.sortTimesSum.addAndGet(sortTime);
 					statHolder.clientTimesSum.addAndGet(clientTime);
 				}

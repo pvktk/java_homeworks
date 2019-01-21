@@ -53,7 +53,7 @@ public class ServersManager implements Runnable {
 					Thread t = new Thread(ts);
 					t.start();
 					t.join();
-					if (statHolder.numberOfArrays.get() == 0) {
+					if (statHolder.fullNumberOfCorrectArrays.get() < 0.5 * statHolder.getFullExpectedNumberArrays()) {
 
 						response = MeasureResponse.newBuilder()
 								.setMeasureSuccessful(false).build();

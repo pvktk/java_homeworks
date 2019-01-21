@@ -30,7 +30,7 @@ public class Transmitter extends AbstractRecieverTransmitter {
 			long processTime = System.nanoTime() - attach.arrayProcessStart;
 			key.cancel();
 			if (attach.isAllClientsWorkedAtMeasure && statHolder.isAllClientsConnected()) {
-				statHolder.numberOfArrays.incrementAndGet();
+				statHolder.fullNumberOfCorrectArrays.incrementAndGet();
 				statHolder.sortTimesSum.addAndGet(attach.sortTime);
 				statHolder.clientTimesSum.addAndGet(processTime);
 			}

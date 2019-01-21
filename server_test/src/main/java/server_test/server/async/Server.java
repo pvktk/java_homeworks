@@ -164,7 +164,7 @@ public class Server implements TestServer {
 												if (!outputBuffer.hasRemaining()) {
 													long processTime = System.nanoTime() - arrayProcessStart;
 													if (isAllClientsWorkedAtMeasure && statHolder.isAllClientsConnected()) {
-														statHolder.numberOfArrays.incrementAndGet();
+														statHolder.fullNumberOfCorrectArrays.incrementAndGet();
 														statHolder.sortTimesSum.addAndGet(sortTime);
 														statHolder.clientTimesSum.addAndGet(processTime);
 													}

@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class StatisticsHolder {
-	public final AtomicInteger numberOfArrays = new AtomicInteger();
+	public final AtomicInteger fullNumberOfCorrectArrays = new AtomicInteger();
 	public final AtomicLong sortTimesSum = new AtomicLong();
 	public final AtomicLong clientTimesSum = new AtomicLong();
 
@@ -12,11 +12,11 @@ public class StatisticsHolder {
 			numberClosedClients = new AtomicInteger();
 
 	public final int expectedNumberClients;
-	public final int expectedNumberArrays;
+	public final int expectedNumberArraysPerClient;
 
 	public StatisticsHolder(int expectedNumberClients, int expectedNumberArrays) {
 		this.expectedNumberClients = expectedNumberClients;
-		this.expectedNumberArrays = expectedNumberArrays;
+		this.expectedNumberArraysPerClient = expectedNumberArrays;
 	}
 
 	public boolean isAllClientsConnected() {
@@ -24,10 +24,14 @@ public class StatisticsHolder {
 	}
 
 	public int getAveragetSortTimeMillis() {
-		return Math.toIntExact(sortTimesSum.get() / numberOfArrays.get() / 1000000);
+		return Math.toIntExact(sortTimesSum.get() / fullNumberOfCorrectArrays.get() / 1000000);
 	}
 
 	public int getAverageProcessTimeMillis() {
-		return Math.toIntExact(clientTimesSum.get() / numberOfArrays.get() / 1000000);
+		return Math.toIntExact(clientTimesSum.get() / fullNumberOfCorrectArrays.get() / 1000000);
+	}
+	
+	public int getFullExpectedNumberArrays() {
+		return expectedNumberArraysPerClient * expectedNumberClients;
 	}
 }
